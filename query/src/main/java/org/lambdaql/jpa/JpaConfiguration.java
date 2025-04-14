@@ -1,7 +1,6 @@
 package org.lambdaql.jpa;
 
 import jakarta.persistence.EntityManager;
-import org.lambdaql.jpa.hibernate.HibernateConfiguration;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
@@ -16,7 +15,6 @@ import org.springframework.data.jpa.repository.support.JpaRepositoryFactoryBean;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 
 @Configuration
-@Import(HibernateConfiguration.class)
 @ConditionalOnClass({ LocalContainerEntityManagerFactoryBean.class, EntityManager.class })
 public class JpaConfiguration {
 

@@ -6,6 +6,8 @@ plugins {
 dependencies {
 
 	implementation 'org.ow2.asm:asm:9.7'
+	implementation 'org.ow2.asm:asm-util:9.7'
+
 
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'

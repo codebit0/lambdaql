@@ -6,6 +6,7 @@ import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
 import org.objectweb.asm.*;
+import org.objectweb.asm.util.Printer;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
@@ -15,15 +16,35 @@ import java.time.temporal.TemporalAccessor;
 import java.util.*;
 
 import static org.objectweb.asm.Opcodes.*;
+import static org.objectweb.asm.util.Printer.*;
 
 public class LambdaPredicateVisitor extends MethodVisitor {
     private final Stack<Object> valueStack = new Stack<>();
     private final Stack<ConditionExpr> exprStack = new Stack<>();
+    private final Stack<ConditionBlock> blockStack = new Stack<>();
     private ConditionExpr conditionExpr;
     private final Metamodel metamodel;
     private final Class<?> entityClass;
     private final ComparisonStateManager stateManager = new ComparisonStateManager();
 
+    private class ConditionBlock {
+        private final LogicalOperator operator;
+        private final List<ConditionExpr> conditions = new ArrayList<>();
+        private final List<Label> labels = new ArrayList<>();
+
+        ConditionBlock(LogicalOperator operator) {
+            this.operator = operator;
+        }
+
+        ConditionExpr toExpressionTree() {
+            if (conditions.isEmpty()) return null;
+            ConditionExpr result = conditions.get(0);
+            for (int i = 1; i < conditions.size(); i++) {
+                result = new LogicalCondition(operator, Arrays.asList(result, conditions.get(i)));
+            }
+            return result;
+        }
+    }
 
     private static final Set<String> DATE_TYPES = Set.of(
             "java/util/Date", "java/sql/Date", "java/sql/Time", "java/sql/Timestamp", "java/util/Calendar",
@@ -96,7 +117,16 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     }
 
     private void pushLogicalExpr(LogicalOperator op, ConditionExpr... exprs) {
-        exprStack.push(new LogicalCondition(op.name(), Arrays.asList(exprs)));
+        exprStack.push(new LogicalCondition(op, Arrays.asList(exprs)));
+    }
+
+    private ConditionExpr buildExpressionTree() {
+        if (exprStack.isEmpty()) return null;
+        List<ConditionExpr> exprs = new ArrayList<>();
+        while (!exprStack.isEmpty()) exprs.add(exprStack.pop());
+        Collections.reverse(exprs);
+        if (exprs.size() == 1) return exprs.get(0);
+        return new LogicalCondition(LogicalOperator.AND, exprs);
     }
 
     private String getFieldFromMethodName(String owner, String methodName) {
@@ -293,8 +323,14 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     System.err.println("❌ exprStack empty at IFEQ/IFNE");
                 }
             }*/
-            case IFEQ, IFNE -> {
-                System.out.println("🔍 IFEQ/IFNE detected: opcode = " + opcode + ", stack = " + valueStack);
+            case IFEQ, IFNE, IFLT, IFLE, IFGT, IFGE -> {
+                System.out.println("🔍 IFEQ/IFNE detected: opcode = " + opcode + ", name = "+ OPCODES[opcode] + ", stack = " + valueStack);
+                if (stateManager.hasPendingComparison()) {
+                    BinaryOperator op = stateManager.resolveOperatorForOpcode(opcode);
+                    ComparisonResult cr = stateManager.consumeComparison();
+                    ConditionExpr expr = new BinaryCondition(cr.left().toString(), op.symbol, cr.right());
+                    pushCondition(expr); // exprStack or blockStack 에 넣음
+                }
                 stateManager.registerBranch(opcode, label);
             }
             case GOTO -> {
@@ -326,20 +362,25 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     @Override
     public void visitInsn(int opcode) {
         switch (opcode) {
+            //상수값으로도 쓰이지만 lcmp류의 반환값으로도 사용됨
             case ICONST_0 -> {
                 System.out.println("🧱 ICONST_0 → push 0");
                 valueStack.push(0);
-                stateManager.setExpectedResult(false);
+                if (stateManager.isCurrentLabelInJumpTarget()) {
+                    stateManager.setExpectedResult(false);
+                }
             }
             case ICONST_1 -> {
                 System.out.println("🧱 ICONST_1 → push 1");
                 valueStack.push(1);
-                stateManager.setExpectedResult(true);
+                if (stateManager.isCurrentLabelInJumpTarget()) {
+                    stateManager.setExpectedResult(true);
+                }
             }
-            case ICONST_2 -> valueStack.push(2);
-            case ICONST_3 -> valueStack.push(3);
-            case ICONST_4 -> valueStack.push(4);
-            case ICONST_5 -> valueStack.push(5);
+            case ICONST_2, ICONST_3, ICONST_4, ICONST_5 -> {
+                valueStack.push(opcode -3);
+                System.out.println("🧱 "+ OPCODES[opcode] +" → push "+(opcode -3));
+            }
             case LCONST_0 -> {
                 System.out.println("🧱 LCONST_0 → push 0L");
                 valueStack.push(0L);
@@ -360,8 +401,12 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 };
                 valueStack.push("(" + left + " " + op + " " + right + ")");
             }
-            case IAND -> pushLogicalExpr(LogicalOperator.AND, exprStack.pop(), exprStack.pop());
-            case IOR -> pushLogicalExpr(LogicalOperator.OR, exprStack.pop(), exprStack.pop());
+            case IAND -> {
+                pushLogicalExpr(LogicalOperator.AND, exprStack.pop(), exprStack.pop());
+            }
+            case IOR -> {
+                pushLogicalExpr(LogicalOperator.OR, exprStack.pop(), exprStack.pop());
+            }
             case LCMP -> {
                 //두 개의 long 값을 비교해서, 결과를 int로 푸시하는 비교 전용 명령어로 같으면 0, 왼쪽이 크면 1, 오른쪽이 크면 -1을 푸시합니다.
                 if (valueStack.size() < 2) {
@@ -378,19 +423,26 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             case IRETURN,ARETURN -> {
                 if (stateManager.hasPendingComparison()) {
                     ComparisonResult cr = stateManager.consumeComparison();
-                    BinaryOperator op = stateManager.isExpectedTrue() ? BinaryOperator.EQ : BinaryOperator.NE;
+                    BinaryOperator op = stateManager.resolveFinalOperator();
                     pushBinaryExpr(cr.left(), op, cr.right());
                 }
-                if (exprStack.isEmpty()) {
-                    System.err.println("❌ exprStack is empty at return");
-                    conditionExpr = null;
+//                if (exprStack.isEmpty()) {
+//                    System.err.println("❌ exprStack is empty at return");
+//                    conditionExpr = null;
+//                } else {
+//                    conditionExpr = exprStack.pop();
+//                    System.out.println("✅ 최종 조건 expr 설정됨: " + conditionExpr);
+//                }
+                if (!blockStack.isEmpty()) {
+                    conditionExpr = blockStack.pop().toExpressionTree();
                 } else {
-                    conditionExpr = exprStack.pop();
-                    System.out.println("✅ 최종 조건 expr 설정됨: " + conditionExpr);
+                    conditionExpr = buildExpressionTree();
                 }
             }
             //case IFNE, IFEQ -> pushLogicalExpr(LogicalOperator.NOT, exprStack.pop());
-            default -> System.out.println("ℹ️ visitInsn: opcode=" + opcode);
+            default -> {
+                System.out.println("ℹ️ visitInsn: opcode=" + opcode);
+            }
         }
     }
 

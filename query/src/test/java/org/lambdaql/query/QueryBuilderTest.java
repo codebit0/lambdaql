@@ -28,7 +28,6 @@ import java.sql.Statement;
 class QueryBuilderTest {
 
     @Configuration
-    @EnableRoutingDataSource
     @EnableAutoConfiguration
     @EnableJpaRepositories(basePackages = {"com.hunet"}) // JPA 스캔
     @EntityScan("com.hunet")
@@ -36,7 +35,7 @@ class QueryBuilderTest {
     }
 
     @Autowired
-    RoutingDataSource routingDataSource;
+    DataSource dataSource;
 
     @Autowired
     private ResourceLoader resourceLoader;
@@ -46,7 +45,7 @@ class QueryBuilderTest {
 
     @BeforeEach
     public void setUp() {
-        DataSource dataSource = routingDataSource.resolvedDataSource("main");
+//        DataSource dataSource = routingDataSource.resolvedDataSource("main");
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
             String sql = resourceLoader.getResource("classpath:table.sql").getContentAsString(StandardCharsets.UTF_8);
@@ -61,7 +60,7 @@ class QueryBuilderTest {
     void selectFrom() {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
-        SelectQuery<Order> where1 = query.where(o -> o.getId() == 10);
+        SelectQuery<Order> where1 = query.where(o -> o.getId() >= 10 &&  o.getId() < 100);
 
         SelectQuery<Order> where2 = query.where(o -> o.getCustomer().getId() == 1);
         SelectQuery<Order> select = where1.select(o -> o.getProduct().toUpperCase());
