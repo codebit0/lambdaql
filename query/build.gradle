@@ -1,0 +1,42 @@
+plugins {
+ 	id 'java-library'
+	id 'maven-publish'
+}
+
+dependencies {
+
+	implementation 'org.ow2.asm:asm:9.7'
+
+	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	compileOnly 'org.springframework.boot:spring-boot-starter'
+	//implementation 'org.springframework.boot:spring-boot-starter-data-hibernate'
+	compileOnly 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	compileOnly('org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4') {
+		exclude group: 'org.springframework.boot'
+	}
+
+	compileOnly 'org.projectlombok:lombok:1.18.36'
+	annotationProcessor 'org.projectlombok:lombok:1.18.36'
+	testAnnotationProcessor 'org.projectlombok:lombok:1.18.36'
+
+	//test
+	testImplementation("org.springframework.boot:spring-boot-starter-test:3.4.2")
+	testCompileOnly('org.projectlombok:lombok:1.18.36')
+	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+	testImplementation("com.hunet.common:core-datasource:1.0.0")
+	testImplementation("org.springframework.boot:spring-boot-starter-jdbc")
+	testImplementation("ch.qos.logback:logback-core:1.5.17")
+	testImplementation("com.h2database:h2:2.3.230")
+
+}
+
+test{
+	useJUnitPlatform()
+
+	testLogging {
+		events "passed", "skipped", "failed"
+	}
+}

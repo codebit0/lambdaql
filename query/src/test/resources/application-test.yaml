@@ -1,0 +1,43 @@
+spring:
+  jpa:
+    show-sql: true
+    properties:
+      hibernate.hibernate.format_sql: true
+    hibernate:
+      ddl-auto: none
+
+# routing datasource 설정
+route:
+  default:
+    properties:
+      # mysql driver options (performance tips)
+      cachePrepStmts: true
+      prepStmtCacheSize: 500
+      prepStmtCacheSqlLimit: 2048
+      useServerPrepStmts: true
+      leakDetectionThreshold: 20001
+      useLocalSessionState: true
+      rewriteBatchedStatements: true
+      cacheResultSetMetadata: true
+      cacheServerConfiguration: true
+      elideSetAutoCommits: true
+      maintainTimeStats: false
+  datasource:
+    # default datasource
+    main:
+      url: jdbc:h2:mem:linq;MODE=MySQL;TRACE_LEVEL_FILE=3
+#      password:
+#      username:
+
+
+logging:
+  level:
+    root: info
+    com.hunet: trace
+    org.hibernate:
+      orm.jdbc.bind: trace
+      SQL: trace          # 실행된 쿼리 로그
+      type.descriptor.sql: trace  # 바인딩 파라미터까지 표시
+
+
+

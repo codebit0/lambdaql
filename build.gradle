@@ -1,0 +1,131 @@
+plugins {
+    id 'idea'
+    id("org.jetbrains.gradle.plugin.idea-ext") version "1.1.10"
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.kordamp.gradle.profiles' version "0.54.0"
+}
+
+println("gradle version: ${gradle.gradleVersion}")
+
+idea {
+    project {
+        settings {
+            encodings {
+                encoding = "UTF-8"
+                properties {
+                    encoding = "UTF-8"
+                }
+            }
+        }
+    }
+}
+
+allprojects {
+    configurations.configureEach {
+        resolutionStrategy {
+            preferProjectModules()
+            cacheDynamicVersionsFor 0, 'seconds'
+            cacheChangingModulesFor 0, 'seconds'
+        }
+    }
+}
+
+subprojects { subproject ->
+
+    repositories {
+        mavenLocal()
+//        maven {
+//            url = project.properties["repository.public.url"] as String
+//        }
+        mavenCentral()
+    }
+
+    // Spring Boot BOM 기본 설정
+    apply plugin: 'io.spring.dependency-management'
+
+    dependencyManagement {
+        imports {
+            mavenBom("org.springframework.boot:spring-boot-dependencies:3.4.2")
+        }
+    }
+
+    // profile 설정
+    profiles {
+        profile('snapshot') {
+            action {
+                project.version += '-SNAPSHOT'
+            }
+        }
+    }
+
+    plugins.withId('java') {
+        def javaVersion = properties.getOrDefault("jvm.version", 21) as int
+        java {
+//            toolchain {
+//                languageVersion.set(JavaLanguageVersion.of(javaVersion))
+//            }
+            [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+        }
+        sourceCompatibility = javaVersion
+        targetCompatibility = javaVersion
+//      compileJava {
+//           options.compilerArgs << "-Ajavadoc.packages=com.hunet"
+//      }
+    }
+
+    def artifactName = "${rootProject.name}-${project.name}"
+
+    plugins.withId('java-library') {
+        jar {
+            archiveBaseName = artifactName
+            archiveClassifier = ""
+        }
+    }
+
+    plugins.withId('maven-publish') {
+        println("  maven-publish plugin is enabled ${project.group}:${artifactName}:${project.version} jdk:${project.java.sourceCompatibility}")
+        // maven publish 할때 javadoc, sources 추가
+        javadoc {
+            options.encoding = 'UTF-8'
+            options.docEncoding = 'UTF-8'
+            options.charSet = "UTF-8"
+
+            copy {
+                from "src/main/docs"
+                into javadoc.destinationDir
+            }
+        }
+
+        subproject.publishing {
+            publications {
+                maven(MavenPublication) {
+                    from components.java
+                    //jar 파일인 경우 artifactId 변경
+                    artifactId = artifactName
+                    versionMapping {
+                        allVariants {
+                            fromResolutionResult()
+                        }
+                    }
+                    java {
+                        withSourcesJar()
+                    }
+                }
+            }
+            /*repositories {
+                maven {
+                    name = "nexus"
+                    url = version.endsWith('-SNAPSHOT') ?
+                            project.properties.get("repository.snapshot.url"):
+                            project.properties.get("repository.release.url")
+                    def nexusId = project.properties.getOrDefault('nexus.id', System.getenv('NEXUS_ID'))
+                    def nexusPassword = project.properties.getOrDefault('nexus.password', System.getenv('NEXUS_PASSWORD'))
+                    credentials {
+                        username = nexusId
+                        password = nexusPassword
+                    }
+                }
+            }*/
+        }
+    }
+}

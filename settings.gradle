@@ -1,0 +1,13 @@
+pluginManagement {
+    //플러그인 넥서스
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'lambadaql'
+
+include 'query'
+
+
