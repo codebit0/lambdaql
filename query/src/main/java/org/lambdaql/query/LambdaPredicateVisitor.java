@@ -8,6 +8,7 @@ import jakarta.persistence.metamodel.Metamodel;
 import org.objectweb.asm.*;
 import org.objectweb.asm.util.Printer;
 
+import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
@@ -19,12 +20,16 @@ import static org.objectweb.asm.Opcodes.*;
 import static org.objectweb.asm.util.Printer.*;
 
 public class LambdaPredicateVisitor extends MethodVisitor {
+    private final Metamodel metamodel;
+    private final Class<?> entityClass;
+    private final SerializedLambda serializedLambda;
+    private final Map<Integer, CapturedValue> capturedValues;
+
     private final Stack<Object> valueStack = new Stack<>();
     private final Stack<ConditionExpr> exprStack = new Stack<>();
     private final Stack<ConditionBlock> blockStack = new Stack<>();
     private ConditionExpr conditionExpr;
-    private final Metamodel metamodel;
-    private final Class<?> entityClass;
+
     private final ComparisonStateManager stateManager = new ComparisonStateManager();
 
     private class ConditionBlock {
@@ -52,10 +57,20 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             "java/time/OffsetTime", "java/time/OffsetDateTime", "java/time/ZonedDateTime"
     );
 
-    public LambdaPredicateVisitor(Metamodel metamodel, Class<?> entityClass) {
+    public LambdaPredicateVisitor(Metamodel metamodel, Class<?> entityClass, SerializedLambda serializedLambda) {
         super(ASM9);
         this.metamodel = metamodel;
         this.entityClass = entityClass;
+        this.serializedLambda = serializedLambda;
+        //캡쳐된 로컬 변수
+        this.capturedValues = new HashMap<>(serializedLambda.getCapturedArgCount());
+        for (int i = 0; i < serializedLambda.getCapturedArgCount(); i++) {
+            Object captured = serializedLambda.getCapturedArg(i);
+            String capturingClass = serializedLambda.getCapturingClass();
+            CapturedValue capturedValue = new CapturedValue(capturingClass, captured);
+            capturedValues.put(i, capturedValue);
+            System.out.println("Captured value: " + capturingClass + " = " + captured+ " index: " + i+ " class: " + capturingClass);
+        }
     }
 
     private String resolveColumnNameRecursive(Class<?> currentClass, String fieldName, String prefix) {
@@ -152,43 +167,37 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     }
 
     /**
-     * 객체 필드 접근 (GETFIELD, PUTFIELD, GETSTATIC, 등)
-     * owner가 엔티티 클래스인지 확인 후, 컬럼 이름으로 해석.
-     *
-     * @param opcode the opcode of the type instruction to be visited. This opcode is either
-     *     GETSTATIC, PUTSTATIC, GETFIELD or PUTFIELD.
-     * @param owner the internal name of the field's owner class (see {@link Type#getInternalName()}).
-     * @param name the field's name.
-     * @param descriptor the field's descriptor (see {@link Type}).
+     * 로컬 변수 로딩 및 저장 (ILOAD, ISTORE, ALOAD, ASTORE 등)
+     * @param opcode the opcode of the local variable instruction to be visited. This opcode is either
+     *     ILOAD, LLOAD, FLOAD, DLOAD, ALOAD, ISTORE, LSTORE, FSTORE, DSTORE, ASTORE or RET.
+     * @param varIndex the operand of the instruction to be visited. This operand is the index of a
+     *     local variable.
      */
     @Override
-    public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
-        System.out.println("🏷 FieldInsn: " + owner + "." + name + " " + descriptor);
-        if (opcode == GETFIELD) {
-            valueStack.push(resolveColumnNameRecursive(entityClass, name, ""));
-        }
-    }
-
-    /**
-     * 상수값 로딩을 처리합니다.
-     * LDC 상수를 값으로 변환하여 스택에 푸시합니다.
-     * @param cst the constant to be loaded on the stack. This parameter must be a non null {@link
-     *     Integer}, a {@link Float}, a {@link Long}, a {@link Double}, a {@link String}, a {@link
-     *     Type} of OBJECT or ARRAY sort for {@code .class} constants, for classes whose version is
-     *     49, a {@link Type} of METHOD sort for MethodType, a {@link Handle} for MethodHandle
-     *     constants, for classes whose version is 51 or a {@link ConstantDynamic} for a constant
-     *     dynamic for classes whose version is 55.
-     */
-    @Override
-    public void visitLdcInsn(Object cst) {
-        System.out.println("💾 LDC: " + cst);
-        if (cst instanceof Date date) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            valueStack.push("'" + sdf.format(date) + "'");
-        } else if (cst instanceof TemporalAccessor time) {
-            valueStack.push("'" + time.toString().replace("T", " ") + "'");
-        } else {
-            valueStack.push(cst);
+    public void visitVarInsn(int opcode, int varIndex) {
+        System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex);
+        switch (opcode) {
+            case ALOAD -> {
+                if ((capturedValues.isEmpty() && varIndex == 0)|| varIndex > capturedValues.size()) {
+                    // 로컬 변수 인덱스가 캡쳐된 값보다 크면, 람다 선언부 타입 변수
+                    // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
+                    // 에서 e.getId() == 1 부분의 e
+                    System.out.println("   ALOAD: lambda variable " + varIndex);
+                }
+            } case ILOAD, LLOAD, FLOAD, DLOAD  -> {
+                if(capturedValues.containsKey(varIndex)){
+                    // 캡쳐된 로컬 변수
+                    CapturedValue capturedValue = capturedValues.get(varIndex);
+                    Object value = capturedValue.value();
+                    System.out.println(OPCODES[opcode]+" : captured value " + varIndex + " = " + value);
+                    valueStack.push(value);
+                } else {
+                    // 로컬 변수 인덱스가 캡쳐된 값보다 크면, 람다 선언부 타입 변수
+                    // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
+                    // 에서 e.getId() == 1 부분의 e
+                    System.out.println(OPCODES[opcode]+" : lambda variable load error" + varIndex);
+                }
+            }
         }
     }
 
@@ -272,6 +281,49 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
         }
     }
+
+    /**
+     * 객체 필드 접근 (GETFIELD, PUTFIELD, GETSTATIC, 등)
+     * owner가 엔티티 클래스인지 확인 후, 컬럼 이름으로 해석.
+     *
+     * @param opcode the opcode of the type instruction to be visited. This opcode is either
+     *     GETSTATIC, PUTSTATIC, GETFIELD or PUTFIELD.
+     * @param owner the internal name of the field's owner class (see {@link Type#getInternalName()}).
+     * @param name the field's name.
+     * @param descriptor the field's descriptor (see {@link Type}).
+     */
+    @Override
+    public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
+        System.out.println("🏷 FieldInsn: " + owner + "." + name + " " + descriptor);
+        if (opcode == GETFIELD) {
+            valueStack.push(resolveColumnNameRecursive(entityClass, name, ""));
+        }
+    }
+
+    /**
+     * 상수값 로딩을 처리합니다.
+     * LDC 상수를 값으로 변환하여 스택에 푸시합니다.
+     * @param cst the constant to be loaded on the stack. This parameter must be a non null {@link
+     *     Integer}, a {@link Float}, a {@link Long}, a {@link Double}, a {@link String}, a {@link
+     *     Type} of OBJECT or ARRAY sort for {@code .class} constants, for classes whose version is
+     *     49, a {@link Type} of METHOD sort for MethodType, a {@link Handle} for MethodHandle
+     *     constants, for classes whose version is 51 or a {@link ConstantDynamic} for a constant
+     *     dynamic for classes whose version is 55.
+     */
+    @Override
+    public void visitLdcInsn(Object cst) {
+        System.out.println("💾 LDC: " + cst);
+        if (cst instanceof Date date) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            valueStack.push("'" + sdf.format(date) + "'");
+        } else if (cst instanceof TemporalAccessor time) {
+            valueStack.push("'" + time.toString().replace("T", " ") + "'");
+        } else {
+            valueStack.push(cst);
+        }
+    }
+
+
 
     /**
      * 조건 분기 및 점프 (IFEQ, IF_ICMPEQ, GOTO 등)
@@ -447,17 +499,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         }
     }
 
-    /**
-     * 로컬 변수 로딩 및 저장 (ILOAD, ISTORE, ALOAD, ASTORE 등)
-     * @param opcode the opcode of the local variable instruction to be visited. This opcode is either
-     *     ILOAD, LLOAD, FLOAD, DLOAD, ALOAD, ISTORE, LSTORE, FSTORE, DSTORE, ASTORE or RET.
-     * @param var the operand of the instruction to be visited. This operand is the index of a
-     *     local variable.
-     */
-    @Override
-    public void visitVarInsn(int opcode, int var) {
-        System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", var=" + var);
-    }
+
 
     /**
      * 예외 처리 블록 설정

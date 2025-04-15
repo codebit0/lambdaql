@@ -59,14 +59,19 @@ class QueryBuilderTest {
     @Test
     void selectFrom() {
         long param1 = 70;
+        long param2 = 90;
+        long param3 = 120;
         Order order = new Order();
         order.setId(10);
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
-        SelectQuery<Order> where1 = query.where(o -> o.getId() == 10 || (o.getId() < 100 && o.getId() >= param1));
+        //SelectQuery<Order> where0 = query.where(o -> o.getId() == 10);
+        SelectQuery<Order> where1 = query.where(o -> o.getId() == param1 || o.getId() == param2 || o.getId() == param3);
+        SelectQuery<Order> where2 = query.where(o -> o.getId() == param1 || (o.getId() < 100 && o.getId() >= param1));
+        SelectQuery<Order> where3 = query.where(o -> o.getId() == order.getId() || (o.getId() < 100 && o.getId() >= param1));
 
 
-        SelectQuery<Order> where2 = query.where(o -> o.getCustomer().getId() == 1);
+        SelectQuery<Order> where4 = query.where(o -> o.getCustomer().getId() == 1);
         SelectQuery<Order> select = where1.select(o -> o.getProduct().toUpperCase());
 
 
@@ -78,11 +83,15 @@ class QueryBuilderTest {
 
     @Test
     void update() {
+        int param1 = 70;
+        Order order = new Order();
+        order.setId(10);
+        Customer customer = new Customer(1, "Bob", List.of(order));
         JinqJPAStreamProvider streams =
                 new JinqJPAStreamProvider(entityManagerFactory);
         List<Customer> customers = streams
                 .streamAll(entityManagerFactory.createEntityManager(), Customer.class)
-                .where( c -> c.getName().equals("Bob") )
+                .where( c -> c.getName().equals("Bob") && c.getId() == customer.getId() )
                 .toList();
         System.out.println(customers);
     }

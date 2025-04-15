@@ -3,11 +3,12 @@ package org.lambdaql.query;
 import jakarta.persistence.*;
 
 
+import java.io.Serializable;
 import java.util.List;
 
 @Entity
 @Table(name = "customers")
-public class Customer {
+public class Customer implements Serializable {
 
     @Id
     @Column(name = "id")
