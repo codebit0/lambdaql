@@ -147,6 +147,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitCode() {
+        System.out.println("//visitCode");
         super.visitCode();
     }
 
@@ -202,14 +203,13 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
-
         System.out.println("📡 visitMethodInsn: owner=" + owner + ", name=" + name + ", desc=" + descriptor);
         //primitive unboxing 메서드 자동 생성 문제 해결
         if (isPrimitiveUnboxingMethod(opcode, owner, name)) {
             if (!valueStack.isEmpty()) {
                 Object boxed = valueStack.pop();
                 valueStack.push(boxed); // 언박싱된 primitive 값을 푸시한다고 간주 (SQL 표현에는 영향 없음)
-                System.out.println("🔄 언박싱 처리: " + boxed);
+                System.out.println("   🔄 언박싱 처리: " + boxed);
             } else {
                 System.err.println("⚠️ valueStack is empty during unboxing: " + owner + "." + name);
             }
@@ -226,8 +226,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             if (column != null) valueStack.push(column);
             return;
         }
-
-
 
         String resolvedLeft = getFieldFromMethodName(owner, name);
         if (resolvedLeft != null) {
@@ -288,6 +286,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitJumpInsn(int opcode, Label label) {
+        System.out.println("//visitJumpInsn:" + OPCODES[opcode]+ " label=" + label);
         switch (opcode) {
             case IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPLE, IF_ICMPGT, IF_ICMPGE -> {
                 if (valueStack.size() < 2) {
@@ -324,12 +323,13 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 }
             }*/
             case IFEQ, IFNE, IFLT, IFLE, IFGT, IFGE -> {
-                System.out.println("🔍 IFEQ/IFNE detected: opcode = " + opcode + ", name = "+ OPCODES[opcode] + ", stack = " + valueStack);
+                System.out.println("🔍 "+ OPCODES[opcode] +" detected: opcode = " + opcode + ", name = "+ OPCODES[opcode] + ", stack = " + valueStack);
                 if (stateManager.hasPendingComparison()) {
                     BinaryOperator op = stateManager.resolveOperatorForOpcode(opcode);
                     ComparisonResult cr = stateManager.consumeComparison();
                     ConditionExpr expr = new BinaryCondition(cr.left().toString(), op.symbol, cr.right());
-                    pushCondition(expr); // exprStack or blockStack 에 넣음
+                    //pushCondition(expr); // exprStack or blockStack 에 넣음
+                    exprStack.push(expr);
                 }
                 stateManager.registerBranch(opcode, label);
             }
@@ -361,6 +361,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitInsn(int opcode) {
+        System.out.println("//visitInsn:"+ OPCODES[opcode] + " opcode=" + opcode);
         switch (opcode) {
             //상수값으로도 쓰이지만 lcmp류의 반환값으로도 사용됨
             case ICONST_0 -> {
@@ -433,11 +434,11 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 //                    conditionExpr = exprStack.pop();
 //                    System.out.println("✅ 최종 조건 expr 설정됨: " + conditionExpr);
 //                }
-                if (!blockStack.isEmpty()) {
-                    conditionExpr = blockStack.pop().toExpressionTree();
-                } else {
-                    conditionExpr = buildExpressionTree();
-                }
+//                if (!blockStack.isEmpty()) {
+//                    conditionExpr = blockStack.pop().toExpressionTree();
+//                } else {
+//                    conditionExpr = buildExpressionTree();
+//                }
             }
             //case IFNE, IFEQ -> pushLogicalExpr(LogicalOperator.NOT, exprStack.pop());
             default -> {
@@ -455,7 +456,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitVarInsn(int opcode, int var) {
-        System.out.println("📦 visitVarInsn: opcode=" + opcode + ", var=" + var);
+        System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", var=" + var);
     }
 
     /**
@@ -497,8 +498,8 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     @Override
     public void visitLabel(Label label) {
         System.out.println("🏷 visitLabel: " + label);
-        super.visitLabel(label);
         stateManager.setCurrentLabel(label);
+        super.visitLabel(label);
     }
 
     /**
@@ -515,7 +516,19 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     }
 
     public ConditionExpr getConditionExpr() {
-        return conditionExpr;
+        if (exprStack.isEmpty()) return null;
+        List<ConditionExpr> all = new ArrayList<>(exprStack);
+        exprStack.clear();
+
+        // 분기된 OR 조건이 포함되었는지 상태로 판단할 수 있다면 여기서 구분 처리 필요
+        LogicalOperator operator = all.stream().anyMatch(expr -> expr instanceof LogicalCondition lc && lc.operator == LogicalOperator.OR)
+                ? LogicalOperator.OR
+                : LogicalOperator.AND;
+
+        return all.size() == 1
+                ? all.get(0)
+                : new LogicalCondition(operator, all);
+//        return conditionExpr;
     }
 
     private boolean isPrimitiveUnboxingMethod(int opcode, String owner, String name) {

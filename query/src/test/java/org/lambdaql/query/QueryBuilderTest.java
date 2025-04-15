@@ -1,9 +1,8 @@
 package org.lambdaql.query;
 
-import com.hunet.common.datasource.RoutingDataSource;
-import com.hunet.common.datasource.annotation.EnableRoutingDataSource;
 import jakarta.persistence.EntityManagerFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.jinq.jpa.JinqJPAStreamProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +19,7 @@ import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.List;
 
 @SpringBootTest( classes = { QueryBuilderTest.TestContext.class })
 @TestPropertySource(properties = "spring.jta.enabled=false")
@@ -29,8 +29,8 @@ class QueryBuilderTest {
 
     @Configuration
     @EnableAutoConfiguration
-    @EnableJpaRepositories(basePackages = {"com.hunet"}) // JPA 스캔
-    @EntityScan("com.hunet")
+    @EnableJpaRepositories(basePackages = {"org.lambdaql"}) // JPA 스캔
+    @EntityScan("org.lambdaql")
     public static class TestContext {
     }
 
@@ -58,9 +58,13 @@ class QueryBuilderTest {
 
     @Test
     void selectFrom() {
+        long param1 = 70;
+        Order order = new Order();
+        order.setId(10);
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
-        SelectQuery<Order> where1 = query.where(o -> o.getId() >= 10 &&  o.getId() < 100);
+        SelectQuery<Order> where1 = query.where(o -> o.getId() == 10 || (o.getId() < 100 && o.getId() >= param1));
+
 
         SelectQuery<Order> where2 = query.where(o -> o.getCustomer().getId() == 1);
         SelectQuery<Order> select = where1.select(o -> o.getProduct().toUpperCase());
@@ -74,6 +78,13 @@ class QueryBuilderTest {
 
     @Test
     void update() {
+        JinqJPAStreamProvider streams =
+                new JinqJPAStreamProvider(entityManagerFactory);
+        List<Customer> customers = streams
+                .streamAll(entityManagerFactory.createEntityManager(), Customer.class)
+                .where( c -> c.getName().equals("Bob") )
+                .toList();
+        System.out.println(customers);
     }
 
     @Test

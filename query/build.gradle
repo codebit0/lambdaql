@@ -7,7 +7,7 @@ dependencies {
 
 	implementation 'org.ow2.asm:asm:9.7'
 	implementation 'org.ow2.asm:asm-util:9.7'
-
+	testImplementation 'org.jinq:jinq-jpa:2.0.2'
 
 	implementation 'org.springframework.boot:spring-boot-starter-jdbc'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -28,7 +28,7 @@ dependencies {
 	testCompileOnly('org.projectlombok:lombok:1.18.36')
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
-	testImplementation("com.hunet.common:core-datasource:1.0.0")
+	//testImplementation("com.hunet.common:core-datasource:1.0.0")
 	testImplementation("org.springframework.boot:spring-boot-starter-jdbc")
 	testImplementation("ch.qos.logback:logback-core:1.5.17")
 	testImplementation("com.h2database:h2:2.3.230")
