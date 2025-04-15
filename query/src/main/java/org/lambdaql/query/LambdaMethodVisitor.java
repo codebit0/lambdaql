@@ -6,18 +6,19 @@ import org.objectweb.asm.MethodVisitor;
 
 
 import java.lang.invoke.SerializedLambda;
+import java.util.List;
 
 import static org.objectweb.asm.Opcodes.*;
 
 public class LambdaMethodVisitor extends ClassVisitor {
     private final Metamodel metamodel;
-    private final Class<?> entityClass;
+    private final List<Class<?>> entityClass;
     private final SerializedLambda serializedLambda;
     private ConditionExpr conditionExpr;
 
     public String implMethod;
 
-    public LambdaMethodVisitor(Metamodel metamodel, Class<?> entityClass, SerializedLambda serializedLambda) {
+    public LambdaMethodVisitor(Metamodel metamodel, List<Class<?>> entityClass, SerializedLambda serializedLambda) {
         super(ASM9);
         this.metamodel = metamodel;
         this.entityClass = entityClass;

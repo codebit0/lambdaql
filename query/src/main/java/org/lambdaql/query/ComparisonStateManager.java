@@ -1,14 +1,14 @@
 package org.lambdaql.query;
 
+import lombok.extern.slf4j.Slf4j;
 import org.objectweb.asm.Label;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.lambdaql.query.LambdaPredicateVisitor.*;
 import static org.objectweb.asm.Opcodes.*;
 
-
+@Slf4j
 public class ComparisonStateManager {
     private ComparisonResult comparison;
     private Label currentLabel;
@@ -18,11 +18,13 @@ public class ComparisonStateManager {
 
     void captureComparison(Object left, Object right) {
         this.comparison = new ComparisonResult(left, right);
+        System.out.println(" > captureComparison: " + comparison);
     }
 
     void registerBranch(int opcode, Label label) {
         this.lastJumpOpcode = opcode;
         this.jumpTargets.add(label);
+        System.out.println(" > registerBranch: "+ opcode+ " label" + label);
     }
 
     void setCurrentLabel(Label label) {
@@ -52,7 +54,8 @@ public class ComparisonStateManager {
     }
 
     BinaryOperator resolveFinalOperator() {
-        if (lastJumpOpcode == null || expectedResult == null) return BinaryOperator.EQ;
+        if (lastJumpOpcode == null || expectedResult == null)
+            return BinaryOperator.EQ;
         return switch (lastJumpOpcode) {
             case IFEQ -> expectedResult ? BinaryOperator.EQ : BinaryOperator.NE;
             case IFNE -> expectedResult ? BinaryOperator.NE : BinaryOperator.EQ;

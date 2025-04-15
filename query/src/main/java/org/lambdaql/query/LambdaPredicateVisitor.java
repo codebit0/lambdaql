@@ -6,7 +6,6 @@ import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
 import org.objectweb.asm.*;
-import org.objectweb.asm.util.Printer;
 
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Field;
@@ -21,7 +20,7 @@ import static org.objectweb.asm.util.Printer.*;
 
 public class LambdaPredicateVisitor extends MethodVisitor {
     private final Metamodel metamodel;
-    private final Class<?> entityClass;
+    private final List<Class<?>> entityClass;
     private final SerializedLambda serializedLambda;
     private final Map<Integer, CapturedValue> capturedValues;
 
@@ -57,7 +56,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             "java/time/OffsetTime", "java/time/OffsetDateTime", "java/time/ZonedDateTime"
     );
 
-    public LambdaPredicateVisitor(Metamodel metamodel, Class<?> entityClass, SerializedLambda serializedLambda) {
+    public LambdaPredicateVisitor(Metamodel metamodel, List<Class<?>> entityClass, SerializedLambda serializedLambda) {
         super(ASM9);
         this.metamodel = metamodel;
         this.entityClass = entityClass;
@@ -312,7 +311,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitLdcInsn(Object cst) {
-        System.out.println("💾 LDC: " + cst);
+        System.out.println("💾 visitLdcInsn LDC: " + cst);
         if (cst instanceof Date date) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             valueStack.push("'" + sdf.format(date) + "'");
@@ -320,78 +319,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             valueStack.push("'" + time.toString().replace("T", " ") + "'");
         } else {
             valueStack.push(cst);
-        }
-    }
-
-
-
-    /**
-     * 조건 분기 및 점프 (IFEQ, IF_ICMPEQ, GOTO 등)
-     * 비교 연산자 기반 BinaryCondition 생성에 사용.
-     * 예: IF_ICMPGT → > 연산 해석.
-     *
-     * @param opcode the opcode of the type instruction to be visited. This opcode is either IFEQ,
-     *     IFNE, IFLT, IFGE, IFGT, IFLE, IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT,
-     *     IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE, GOTO, JSR, IFNULL or IFNONNULL.
-     * @param label the operand of the instruction to be visited. This operand is a label that
-     *     designates the instruction to which the jump instruction may jump.
-     */
-    @Override
-    public void visitJumpInsn(int opcode, Label label) {
-        System.out.println("//visitJumpInsn:" + OPCODES[opcode]+ " label=" + label);
-        switch (opcode) {
-            case IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPLE, IF_ICMPGT, IF_ICMPGE -> {
-                if (valueStack.size() < 2) {
-                    System.err.println("❌ Stack too small at jump opcode: " + opcode);
-                    new RuntimeException().printStackTrace();
-                    return;
-                }
-
-                Object right = valueStack.pop();
-                Object left = valueStack.pop();
-
-                BinaryOperator operator = switch (opcode) {
-                    case IF_ICMPEQ -> BinaryOperator.EQ;
-                    case IF_ICMPNE -> BinaryOperator.NE;
-                    case IF_ICMPLT -> BinaryOperator.LT;
-                    case IF_ICMPLE -> BinaryOperator.LE;
-                    case IF_ICMPGT -> BinaryOperator.GT;
-                    case IF_ICMPGE -> BinaryOperator.GE;
-                    default -> throw new UnsupportedOperationException("Unsupported jump opcode: " + opcode);
-                };
-
-                pushBinaryExpr(left, operator, right);
-                System.out.println("✅ 비교 조건 추가됨: " + left + " " + operator.symbol + " " + right);
-            }
-            /*case IFEQ, IFNE -> {
-                // Stack에서 Boolean 결과 (1 또는 0) 을 평가하는 비교
-                if (!exprStack.isEmpty()) {
-                    ConditionExpr expr = exprStack.pop();
-                    LogicalOperator op = opcode == IFEQ ? LogicalOperator.NOT : LogicalOperator.AND;
-                    pushLogicalExpr(op, expr);
-                    System.out.println("✅ 단항 논리 조건 추가됨 (IFEQ/IFNE): " + op);
-                } else {
-                    System.err.println("❌ exprStack empty at IFEQ/IFNE");
-                }
-            }*/
-            case IFEQ, IFNE, IFLT, IFLE, IFGT, IFGE -> {
-                System.out.println("🔍 "+ OPCODES[opcode] +" detected: opcode = " + opcode + ", name = "+ OPCODES[opcode] + ", stack = " + valueStack);
-                if (stateManager.hasPendingComparison()) {
-                    BinaryOperator op = stateManager.resolveOperatorForOpcode(opcode);
-                    ComparisonResult cr = stateManager.consumeComparison();
-                    ConditionExpr expr = new BinaryCondition(cr.left().toString(), op.symbol, cr.right());
-                    //pushCondition(expr); // exprStack or blockStack 에 넣음
-                    exprStack.push(expr);
-                }
-                stateManager.registerBranch(opcode, label);
-            }
-            case GOTO -> {
-                System.out.println("🔁 GOTO encountered: jump to label " + label);
-            }
-
-            default -> {
-                throw new UnsupportedOperationException("Unsupported jump opcode: " + opcode);
-            }
         }
     }
 
@@ -418,16 +345,18 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             //상수값으로도 쓰이지만 lcmp류의 반환값으로도 사용됨
             case ICONST_0 -> {
                 System.out.println("🧱 ICONST_0 → push 0");
-                valueStack.push(0);
-                if (stateManager.isCurrentLabelInJumpTarget()) {
+                if (stateManager.hasPendingComparison()) {
                     stateManager.setExpectedResult(false);
+                } else {
+                    valueStack.push(0);
                 }
             }
             case ICONST_1 -> {
                 System.out.println("🧱 ICONST_1 → push 1");
-                valueStack.push(1);
-                if (stateManager.isCurrentLabelInJumpTarget()) {
+                if (stateManager.hasPendingComparison()) {
                     stateManager.setExpectedResult(true);
+                } else {
+                    valueStack.push(1);
                 }
             }
             case ICONST_2, ICONST_3, ICONST_4, ICONST_5 -> {
@@ -461,14 +390,16 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 pushLogicalExpr(LogicalOperator.OR, exprStack.pop(), exprStack.pop());
             }
             case LCMP -> {
+                //LCMP는 항상 비교 조건으로 변환되어야 하므로, 조건 분기 없이 쓰이는 LCMP는 분석 대상에서 제외
                 //두 개의 long 값을 비교해서, 결과를 int로 푸시하는 비교 전용 명령어로 같으면 0, 왼쪽이 크면 1, 오른쪽이 크면 -1을 푸시합니다.
                 if (valueStack.size() < 2) {
+                    //값비교를 위해서는 항상 2개의 변수가 필요
                     System.err.println("❌ LCMP: insufficient operands, stack=" + valueStack);
                     return;
                 }
                 Object right = valueStack.pop();
                 Object left = valueStack.pop();
-                //valueStack.push(new ComparisonResult(left, right));
+                //값 비교는 0,1,-1 을 반환하므로 IFXX lable 이 따라옴
                 stateManager.captureComparison(left, right);
                 System.out.println("🧮 LCMP → push ComparisonResult(" + left + ", " + right + ")");
             }
@@ -495,6 +426,71 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             //case IFNE, IFEQ -> pushLogicalExpr(LogicalOperator.NOT, exprStack.pop());
             default -> {
                 System.out.println("ℹ️ visitInsn: opcode=" + opcode);
+            }
+        }
+    }
+
+    /**
+     * 조건 분기 및 점프 (IFEQ, IF_ICMPEQ, GOTO 등)
+     * 비교 연산자 기반 BinaryCondition 생성에 사용.
+     * 예: IF_ICMPGT → > 연산 해석.
+     *
+     * @param opcode the opcode of the type instruction to be visited. This opcode is either IFEQ,
+     *     IFNE, IFLT, IFGE, IFGT, IFLE,
+     *     IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT,
+     *     IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE, GOTO, JSR, IFNULL or IFNONNULL.
+     * @param label the operand of the instruction to be visited. This operand is a label that
+     *     designates the instruction to which the jump instruction may jump.
+     */
+    @Override
+    public void visitJumpInsn(int opcode, Label label) {
+        System.out.println("//visitJumpInsn:" + OPCODES[opcode]+ " label=" + label);
+        switch (opcode) {
+            case IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPLE, IF_ICMPGT, IF_ICMPGE -> {
+                //int, boolean, byte, char, short 는 내부적으로 모두 int로 변환되기 때문에
+                //별도 ICMP는 없고 바로 IF_ICMPxx 조건 분기 명령으로 처리
+                if (valueStack.size() < 2) {
+                    System.err.println("❌ Stack too small at jump opcode: " + opcode);
+                    new RuntimeException().printStackTrace();
+                    return;
+                }
+
+                Object right = valueStack.pop();
+                Object left = valueStack.pop();
+
+                BinaryOperator operator = switch (opcode) {
+                    case IF_ICMPEQ -> BinaryOperator.EQ;
+                    case IF_ICMPNE -> BinaryOperator.NE;
+                    case IF_ICMPLT -> BinaryOperator.LT;
+                    case IF_ICMPLE -> BinaryOperator.LE;
+                    case IF_ICMPGT -> BinaryOperator.GT;
+                    case IF_ICMPGE -> BinaryOperator.GE;
+                    default -> throw new UnsupportedOperationException("Unsupported jump opcode: " + opcode);
+                };
+
+                pushBinaryExpr(left, operator, right);
+                System.out.println("✅ 비교 조건 추가됨: " + left + " " + operator.symbol + " " + right);
+            }
+            case IFEQ, IFNE, IFLT, IFLE, IFGT, IFGE -> {
+                System.out.println("🔍 "+ OPCODES[opcode] +" detected: opcode = " + opcode + ", label = "+ label + ", stack = " + valueStack);
+                if (stateManager.hasPendingComparison()) {
+//                    BinaryOperator op = stateManager.resolveOperatorForOpcode(opcode);
+//                    ComparisonResult cr = stateManager.consumeComparison();
+//                    ConditionExpr expr = new BinaryCondition(cr.left().toString(), op.symbol, cr.right());
+//                    exprStack.push(expr);
+                    stateManager.registerBranch(opcode, label);
+                }
+                //stateManager.registerBranch(opcode, label);
+            }
+            case IF_ACMPEQ -> {
+                //TODO 참조형 레퍼런스 주소 비교를 id비교로 변경
+            }
+            case GOTO -> {
+                System.out.println("🔁 GOTO encountered: jump to label " + label);
+            }
+
+            default -> {
+                throw new UnsupportedOperationException("Unsupported jump opcode: " + opcode);
             }
         }
     }
@@ -596,8 +592,5 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             this.embeddedClass = embeddedClass;
             this.prefix = prefix;
         }
-    }
-
-    record ComparisonResult(Object left, Object right) {
     }
 }

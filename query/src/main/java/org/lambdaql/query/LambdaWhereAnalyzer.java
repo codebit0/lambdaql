@@ -7,14 +7,15 @@ import org.objectweb.asm.*;
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class LambdaWhereAnalyzer {
 
     private final EntityManager entityManager;
-    private final Class<?> entityClass;
+    private final List<Class<?>> entityClass;
 
-    public LambdaWhereAnalyzer(EntityManager entityManager, Class<?> entityClass) {
+    public LambdaWhereAnalyzer(EntityManager entityManager, List<Class<?>> entityClass) {
         this.entityManager = entityManager;
         this.entityClass = entityClass;
     }

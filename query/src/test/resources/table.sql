@@ -2,6 +2,7 @@ CREATE TABLE customers
 (
     id INT NOT NULL,
     name        VARCHAR(255),
+    create_at   DATETIME,
     PRIMARY KEY (id)
 );
 

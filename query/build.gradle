@@ -24,8 +24,9 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok:1.18.36'
 
 	//test
-	testImplementation("org.springframework.boot:spring-boot-starter-test:3.4.2")
 	testCompileOnly('org.projectlombok:lombok:1.18.36')
+
+	testImplementation("org.springframework.boot:spring-boot-starter-test:3.4.2")
 	testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
 	//testImplementation("com.hunet.common:core-datasource:1.0.0")

@@ -19,7 +19,10 @@ import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.Date;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @SpringBootTest( classes = { QueryBuilderTest.TestContext.class })
 @TestPropertySource(properties = "spring.jta.enabled=false")
@@ -57,7 +60,24 @@ class QueryBuilderTest {
 
 
     @Test
-    void selectFrom() {
+    void selectFromBasic() {
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+        SelectQuery<Order> where0 = query.where(o -> o.getId() == 10);
+        assertEquals("SELECT * FROM orders", where0.toString());
+    }
+
+    @Test
+    void selectFromDate() {
+        Date now = new Date();
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+        SelectQuery<Order> where0 = query.where(o -> o.getId() == 10);
+        //assertEquals("SELECT * FROM orders", queryBuilder.getQuery());
+    }
+
+    @Test
+    void selectFrom2() {
         long param1 = 70;
         long param2 = 90;
         long param3 = 120;

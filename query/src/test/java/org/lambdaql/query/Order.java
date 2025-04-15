@@ -1,11 +1,15 @@
 package org.lambdaql.query;
 
 import jakarta.persistence.*;
+import lombok.Data;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
+import java.util.Date;
 
 @Entity
 @Table(name = "orders")
+@Data
 public class Order implements Serializable {
 
     @Id
@@ -13,6 +17,10 @@ public class Order implements Serializable {
     private Long id;
 
     private String product;
+
+    private LocalDateTime updateAt;
+
+    private Date createAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")

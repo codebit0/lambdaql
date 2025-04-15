@@ -1,6 +1,7 @@
 package org.lambdaql.query;
 
 import java.io.Serializable;
+import java.util.List;
 
 public class SelectQuery<T> {
 
@@ -33,7 +34,7 @@ public class SelectQuery<T> {
     }
 
     public SelectQuery<T> where(Where<T> condition) {
-        this.condition = new LambdaWhereAnalyzer(columnResolver.getEntityManagerFactory().createEntityManager(), entityClass).analyze(condition);
+        this.condition = new LambdaWhereAnalyzer(columnResolver.getEntityManagerFactory().createEntityManager(), List.of(entityClass)).analyze(condition);
         return this;
     }
 
