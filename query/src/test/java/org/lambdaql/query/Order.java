@@ -16,6 +16,7 @@ public class Order implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name= "product_id")
     private String product;
 
     private LocalDateTime updateAt;

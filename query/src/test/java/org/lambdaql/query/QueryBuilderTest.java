@@ -68,6 +68,14 @@ class QueryBuilderTest {
     }
 
     @Test
+    void selectFromBasicAnd() {
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+        SelectQuery<Order> where0 = query.where(o -> o.getId() >= 0 && o.getId() <= 1);
+        assertEquals("SELECT * FROM orders", where0.toString());
+    }
+
+    @Test
     void selectFromDate() {
         Date now = new Date();
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
@@ -85,7 +93,7 @@ class QueryBuilderTest {
         order.setId(10);
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
-        //SelectQuery<Order> where0 = query.where(o -> o.getId() == 10);
+
         SelectQuery<Order> where1 = query.where(o -> o.getId() == param1 || o.getId() == param2 || o.getId() == param3);
         SelectQuery<Order> where2 = query.where(o -> o.getId() == param1 || (o.getId() < 100 && o.getId() >= param1));
         SelectQuery<Order> where3 = query.where(o -> o.getId() == order.getId() || (o.getId() < 100 && o.getId() >= param1));

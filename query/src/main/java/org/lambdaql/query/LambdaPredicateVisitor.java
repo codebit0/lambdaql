@@ -4,7 +4,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
+import jakarta.persistence.metamodel.ManagedType;
 import jakarta.persistence.metamodel.Metamodel;
+import org.hibernate.metamodel.model.domain.internal.SingularAttributeImpl;
 import org.objectweb.asm.*;
 
 import java.lang.invoke.SerializedLambda;
@@ -20,7 +22,7 @@ import static org.objectweb.asm.util.Printer.*;
 
 public class LambdaPredicateVisitor extends MethodVisitor {
     private final Metamodel metamodel;
-    private final List<Class<?>> entityClass;
+    private final List<Class<?>> entityClasses;
     private final SerializedLambda serializedLambda;
     private final Map<Integer, CapturedValue> capturedValues;
 
@@ -56,11 +58,27 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             "java/time/OffsetTime", "java/time/OffsetDateTime", "java/time/ZonedDateTime"
     );
 
-    public LambdaPredicateVisitor(Metamodel metamodel, List<Class<?>> entityClass, SerializedLambda serializedLambda) {
+    public LambdaPredicateVisitor(Metamodel metamodel, List<Class<?>> entityClasses, SerializedLambda serializedLambda) {
         super(ASM9);
         this.metamodel = metamodel;
-        this.entityClass = entityClass;
+        this.entityClasses = entityClasses;
         this.serializedLambda = serializedLambda;
+
+        ManagedType<?> managedType = metamodel.managedType(entityClasses.get(0));
+        managedType.getAttributes().stream().forEach(attr-> {
+
+            if (attr instanceof SingularAttributeImpl) {
+                SingularAttributeImpl<?, ?> hAttr = (SingularAttributeImpl<?, ?>) attr;
+                System.out.println(hAttr);
+            }
+        });
+        EntityType<?> entity = metamodel.entity(entityClasses.get(0));
+        entity.getAttributes().forEach( a-> {
+                    System.out.println(a);
+            }
+        );
+
+
         //캡쳐된 로컬 변수
         this.capturedValues = new HashMap<>(serializedLambda.getCapturedArgCount());
         for (int i = 0; i < serializedLambda.getCapturedArgCount(); i++) {
@@ -70,6 +88,14 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             capturedValues.put(i, capturedValue);
             System.out.println("Captured value: " + capturingClass + " = " + captured+ " index: " + i+ " class: " + capturingClass);
         }
+        System.out.println("serializedLambda getCapturingClass: "+serializedLambda.getCapturingClass());
+        System.out.println("serializedLambda getFunctionalInterfaceClass: "+serializedLambda.getFunctionalInterfaceClass());
+        System.out.println("serializedLambda getFunctionalInterfaceMethodName: "+serializedLambda.getFunctionalInterfaceMethodName());
+        System.out.println("serializedLambda getFunctionalInterfaceMethodSignature: "+serializedLambda.getFunctionalInterfaceMethodSignature());
+        System.out.println("serializedLambda getImplClass: "+serializedLambda.getImplClass());
+        System.out.println("serializedLambda getImplMethodName: "+serializedLambda.getImplMethodName());
+        System.out.println("serializedLambda getImplMethodSignature: "+serializedLambda.getImplMethodSignature());
+        System.out.println("serializedLambda getInstantiatedMethodType: "+serializedLambda.getInstantiatedMethodType());
     }
 
     private String resolveColumnNameRecursive(Class<?> currentClass, String fieldName, String prefix) {
@@ -109,9 +135,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     }
 
     private String resolveColumnNameFromGetter(String owner, String methodName) {
-        if (!owner.replace("/", ".").equals(entityClass.getName())) {
-            return null;
-        }
+//        if (!owner.replace("/", ".").equals(entityClass.getName())) {
+//            return null;
+//        }
 
         String fieldName = null;
         if (methodName.startsWith("get") && methodName.length() > 3) {
@@ -120,9 +146,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
         }
 
-        if (fieldName != null) {
-            return resolveColumnNameRecursive(entityClass, fieldName, "");
-        }
+//        if (fieldName != null) {
+//            return resolveColumnNameRecursive(entityClass, fieldName, "");
+//        }
         return null;
     }
 
@@ -144,7 +170,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     }
 
     private String getFieldFromMethodName(String owner, String methodName) {
-        if (!owner.replace("/", ".").equals(entityClass.getName())) return null;
+//        if (!owner.replace("/", ".").equals(entityClass.getName())) return null;
 
         String fieldName = null;
         if (methodName.startsWith("get") && methodName.length() > 3)
@@ -152,7 +178,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         else if (methodName.startsWith("is") && methodName.length() > 2)
             fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
 
-        return fieldName != null ? resolveColumnNameRecursive(entityClass, fieldName, "") : null;
+        return fieldName != null ? resolveColumnNameRecursive(entityClasses.get(0), fieldName, "") : null;
     }
 
     /**
@@ -177,7 +203,8 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex);
         switch (opcode) {
             case ALOAD -> {
-                if ((capturedValues.isEmpty() && varIndex == 0)|| varIndex > capturedValues.size()) {
+                if ((capturedValues.isEmpty() && varIndex == 0)
+                        || varIndex > capturedValues.size()) {
                     // 로컬 변수 인덱스가 캡쳐된 값보다 크면, 람다 선언부 타입 변수
                     // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
                     // 에서 e.getId() == 1 부분의 e
@@ -295,7 +322,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
         System.out.println("🏷 FieldInsn: " + owner + "." + name + " " + descriptor);
         if (opcode == GETFIELD) {
-            valueStack.push(resolveColumnNameRecursive(entityClass, name, ""));
+            valueStack.push(resolveColumnNameRecursive(entityClasses.get(0), name, ""));
         }
     }
 
@@ -472,6 +499,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 System.out.println("✅ 비교 조건 추가됨: " + left + " " + operator.symbol + " " + right);
             }
             case IFEQ, IFNE, IFLT, IFLE, IFGT, IFGE -> {
+                //IFGT > , IFGE >=, IFLT <, IFLE <=, IFNE !=, IFEQ ==
                 System.out.println("🔍 "+ OPCODES[opcode] +" detected: opcode = " + opcode + ", label = "+ label + ", stack = " + valueStack);
                 if (stateManager.hasPendingComparison()) {
 //                    BinaryOperator op = stateManager.resolveOperatorForOpcode(opcode);

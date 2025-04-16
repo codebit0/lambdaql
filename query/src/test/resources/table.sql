@@ -10,6 +10,6 @@ CREATE TABLE orders
 (
     id          BIGINT NOT NULL AUTO_INCREMENT,
     customer_id INT,
-    product     VARCHAR(255),
+    product_id     VARCHAR(255),
     PRIMARY KEY (id)
 );
