@@ -7,6 +7,7 @@ import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.ManagedType;
 import jakarta.persistence.metamodel.Metamodel;
 import org.hibernate.metamodel.model.domain.internal.SingularAttributeImpl;
+import org.lambdaql.query.lambda.ColumnEntity;
 import org.objectweb.asm.*;
 
 import java.lang.invoke.SerializedLambda;
@@ -24,11 +25,13 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     private final Metamodel metamodel;
     private final List<Class<?>> entityClasses;
     private final SerializedLambda serializedLambda;
+    private final int accessFlags;
     private final Map<Integer, CapturedValue> capturedValues;
+    private final int lambdaParameterStartIndex;
 
-    private final Stack<Object> valueStack = new Stack<>();
-    private final Stack<ConditionExpr> exprStack = new Stack<>();
-    private final Stack<ConditionBlock> blockStack = new Stack<>();
+    private final Deque<Object> valueStack = new ArrayDeque<>();
+    private final Deque<ConditionExpr> exprStack = new ArrayDeque<>();
+    private final Deque<ConditionBlock> blockStack = new ArrayDeque<>();
     private ConditionExpr conditionExpr;
 
     private final ComparisonStateManager stateManager = new ComparisonStateManager();
@@ -58,11 +61,44 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             "java/time/OffsetTime", "java/time/OffsetDateTime", "java/time/ZonedDateTime"
     );
 
-    public LambdaPredicateVisitor(Metamodel metamodel, List<Class<?>> entityClasses, SerializedLambda serializedLambda) {
+    public LambdaPredicateVisitor(Metamodel metamodel, List<Class<?>> entityClasses, SerializedLambda serializedLambda, int accessFlags) {
         super(ASM9);
         this.metamodel = metamodel;
         this.entityClasses = entityClasses;
         this.serializedLambda = serializedLambda;
+        this.accessFlags = accessFlags;
+
+        if ((accessFlags & Opcodes.ACC_STATIC) == 0) {
+            System.out.println("🧩 Detected NON-static lambda");
+        } else {
+            System.out.println("🧩 Detected STATIC lambda");
+        }
+
+        boolean isStatic = (accessFlags & Opcodes.ACC_STATIC) != 0;
+
+        //캡쳐된 로컬 변수
+        this.capturedValues = new HashMap<>(serializedLambda.getCapturedArgCount());
+        int nextIndex = 0;
+        for (int i = 0; i < serializedLambda.getCapturedArgCount(); i++) {
+            Object captured = serializedLambda.getCapturedArg(i);
+            String capturingClass = serializedLambda.getCapturingClass();
+            System.out.println("Captured value: " + capturingClass + " = " + captured+ " index: " + i+ " next "+nextIndex+ " class: " + capturingClass);
+            if(i == 0 && !isStatic) {
+                //첫번째 인자에 호출측 this가 들어감
+                capturedValues.put(0, new CapturedValue("this", captured));
+                nextIndex++;
+                continue;
+            }
+
+            CapturedValue capturedValue = new CapturedValue(capturingClass, captured);
+            capturedValues.put(nextIndex, capturedValue);
+            if(captured instanceof Long || captured instanceof Double) {
+                nextIndex +=2;
+            } else {
+                nextIndex++;
+            }
+        }
+        this.lambdaParameterStartIndex = nextIndex;
 
         ManagedType<?> managedType = metamodel.managedType(entityClasses.get(0));
         managedType.getAttributes().stream().forEach(attr-> {
@@ -78,16 +114,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
         );
 
-
-        //캡쳐된 로컬 변수
-        this.capturedValues = new HashMap<>(serializedLambda.getCapturedArgCount());
-        for (int i = 0; i < serializedLambda.getCapturedArgCount(); i++) {
-            Object captured = serializedLambda.getCapturedArg(i);
-            String capturingClass = serializedLambda.getCapturingClass();
-            CapturedValue capturedValue = new CapturedValue(capturingClass, captured);
-            capturedValues.put(i, capturedValue);
-            System.out.println("Captured value: " + capturingClass + " = " + captured+ " index: " + i+ " class: " + capturingClass);
-        }
         System.out.println("serializedLambda getCapturingClass: "+serializedLambda.getCapturingClass());
         System.out.println("serializedLambda getFunctionalInterfaceClass: "+serializedLambda.getFunctionalInterfaceClass());
         System.out.println("serializedLambda getFunctionalInterfaceMethodName: "+serializedLambda.getFunctionalInterfaceMethodName());
@@ -96,6 +122,14 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         System.out.println("serializedLambda getImplMethodName: "+serializedLambda.getImplMethodName());
         System.out.println("serializedLambda getImplMethodSignature: "+serializedLambda.getImplMethodSignature());
         System.out.println("serializedLambda getInstantiatedMethodType: "+serializedLambda.getInstantiatedMethodType());
+    }
+
+    private Object findVarInsn(int index) {
+        if (index < lambdaParameterStartIndex) {
+            return capturedValues.get(index);
+        } else {
+            return new ColumnEntity(entityClasses.get(index - lambdaParameterStartIndex));
+        }
     }
 
     private String resolveColumnNameRecursive(Class<?> currentClass, String fieldName, String prefix) {
@@ -191,6 +225,41 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         super.visitCode();
     }
 
+    @Override
+    public void visitFrame(
+            final int type,
+            final int numLocal,
+            final Object[] local,
+            final int numStack,
+            final Object[] stack) {
+
+        super.visitFrame(type, numLocal, local, numStack, stack);
+        System.out.println("//visitFrame: type=" + type + ", numLocal=" + numLocal + ", local=" + Arrays.toString(local) +", numStack=" + numStack + ", stack=" + Arrays.toString(stack));
+    }
+
+
+    /**
+     *
+     * @param name 매개변수 이름 또는 제공되지 않은 경우 {@literal null}.
+     * @param access 매개변수의 접근 플래그로, {@code ACC_FINAL}, {@code ACC_SYNTHETIC},
+     *     또는/그리고 {@code ACC_MANDATED}만 허용됩니다 (참조: {@link Opcodes}).
+     */
+    @Override
+    public void visitParameter(final String name, final int access) {
+        super.visitParameter(name, access);
+        System.out.println("visitParameter name:"+name + " access:"+access);
+    }
+
+    /**
+     * Visits a non standard attribute of this method.
+     * @param attribute an attribute.
+     */
+    @Override
+    public void visitAttribute(org.objectweb.asm.Attribute attribute) {
+        super.visitAttribute(attribute);
+        System.out.println("visitAttribute: "+attribute);
+    }
+
     /**
      * 로컬 변수 로딩 및 저장 (ILOAD, ISTORE, ALOAD, ASTORE 등)
      * @param opcode the opcode of the local variable instruction to be visited. This opcode is either
@@ -200,15 +269,23 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitVarInsn(int opcode, int varIndex) {
-        System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex);
+        System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex+ " value "+findVarInsn(varIndex));
         switch (opcode) {
-            case ALOAD -> {
+            case ALOAD, ILOAD, LLOAD, FLOAD, DLOAD -> {
+                valueStack.push(findVarInsn(varIndex));
+            }
+            default -> {
+                throw new UnsupportedOperationException("Unsupported opcode: " + OPCODES[opcode]);
+            }
+
+            /*case ALOAD -> {
                 if ((capturedValues.isEmpty() && varIndex == 0)
                         || varIndex > capturedValues.size()) {
                     // 로컬 변수 인덱스가 캡쳐된 값보다 크면, 람다 선언부 타입 변수
                     // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
                     // 에서 e.getId() == 1 부분의 e
                     System.out.println("   ALOAD: lambda variable " + varIndex);
+                    valueStack.push(new ColumnEntity(entityClasses.get(0)));
                 }
             } case ILOAD, LLOAD, FLOAD, DLOAD  -> {
                 if(capturedValues.containsKey(varIndex)){
@@ -223,7 +300,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     // 에서 e.getId() == 1 부분의 e
                     System.out.println(OPCODES[opcode]+" : lambda variable load error" + varIndex);
                 }
-            }
+            }*/
         }
     }
 

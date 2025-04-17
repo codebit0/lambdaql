@@ -28,7 +28,8 @@ public class LambdaMethodVisitor extends ClassVisitor {
     @Override
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         if (name.equals(implMethod)) {
-            return new LambdaPredicateVisitor(metamodel, entityClass, serializedLambda) {
+            System.out.println(" > visitMethod: " + name + " " + desc+ " " + signature);
+            return new LambdaPredicateVisitor(metamodel, entityClass, serializedLambda, access) {
                 @Override
                 public void visitEnd() {
                     conditionExpr = getConditionExpr();

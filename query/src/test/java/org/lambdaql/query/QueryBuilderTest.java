@@ -58,6 +58,7 @@ class QueryBuilderTest {
         }
     }
 
+    private int nonStaticLambda = 100;
 
     @Test
     void selectFromBasic() {
@@ -65,6 +66,26 @@ class QueryBuilderTest {
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
         SelectQuery<Order> where0 = query.where(o -> o.getId() == 10);
         assertEquals("SELECT * FROM orders", where0.toString());
+    }
+
+    @Test
+    void selectVarIndexTest() {
+        long param1 = 70;
+        int param2 = 90;
+        float param3 = 120;
+        double param4 = 130;
+        String param5 = "test";
+        boolean param6 = true;
+        short param7 = 10;
+        byte param8 = 11;
+        int[] param9 = {1, 2, 3};
+
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+
+        SelectQuery<Order> where1 = query.where(o -> o.getId() == nonStaticLambda || o.getId() == param1 || o.getId() == param2
+                || o.getId() == param3||  o.getId() == param4);
+        System.out.println(where1.toString());
     }
 
     @Test
