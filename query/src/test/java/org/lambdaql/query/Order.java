@@ -2,6 +2,8 @@ package org.lambdaql.query;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -10,6 +12,8 @@ import java.util.Date;
 @Entity
 @Table(name = "orders")
 @Data
+@Getter
+@Setter
 public class Order implements Serializable {
 
     @Id
@@ -18,6 +22,18 @@ public class Order implements Serializable {
 
     @Column(name= "product_id")
     private String product;
+
+    private byte[] image;
+
+    private String description;
+
+    private double price;
+
+    private float tex;
+
+    private short status;
+
+    private boolean active;
 
     private LocalDateTime updateAt;
 
@@ -34,19 +50,5 @@ public class Order implements Serializable {
         this.product = product;
     }
 
-    public Long getId() {
-        return id;
-    }
 
-    public void setId(long id) {
-        this.id = id;
-    }
-
-    public String getProduct() {
-        return product;
-    }
-
-    public Customer getCustomer() {
-        return customer;
-    }
 }

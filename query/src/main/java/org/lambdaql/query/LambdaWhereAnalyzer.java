@@ -2,13 +2,16 @@ package org.lambdaql.query;
 
 import org.lambdaql.query.SelectQuery.Where;
 import jakarta.persistence.EntityManager;
+import org.lambdaql.query.lambda.CapturedFieldAnalyzer;
 import org.objectweb.asm.*;
 
 import java.lang.invoke.SerializedLambda;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class LambdaWhereAnalyzer {
 
@@ -27,10 +30,8 @@ public class LambdaWhereAnalyzer {
             Object serialized = method.invoke(whereClause);
 
             if (serialized instanceof SerializedLambda sl) {
-                String implMethod = sl.getImplMethodName();
                 ClassReader reader = new ClassReader(sl.getImplClass().replace('/', '.'));
-                LambdaMethodVisitor visitor = new LambdaMethodVisitor(entityManager.getMetamodel(), entityClass, sl);
-                visitor.implMethod = implMethod;
+                LambdaMethodVisitor visitor = new LambdaMethodVisitor(method, sl, entityClass, entityManager.getMetamodel());
                 reader.accept(visitor, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
                 return visitor.getConditionExpr();
             }
@@ -39,5 +40,6 @@ public class LambdaWhereAnalyzer {
         }
         throw new UnsupportedOperationException("Lambda parsing failed");
     }
+
 
 }

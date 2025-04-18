@@ -4,10 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
-import jakarta.persistence.metamodel.ManagedType;
 import jakarta.persistence.metamodel.Metamodel;
-import org.hibernate.metamodel.model.domain.internal.SingularAttributeImpl;
-import org.lambdaql.query.lambda.ColumnEntity;
+import org.lambdaql.query.lambda.LambdaVariable;
 import org.objectweb.asm.*;
 
 import java.lang.invoke.SerializedLambda;
@@ -22,12 +20,12 @@ import static org.objectweb.asm.Opcodes.*;
 import static org.objectweb.asm.util.Printer.*;
 
 public class LambdaPredicateVisitor extends MethodVisitor {
+
     private final Metamodel metamodel;
     private final List<Class<?>> entityClasses;
     private final SerializedLambda serializedLambda;
-    private final int accessFlags;
-    private final Map<Integer, CapturedValue> capturedValues;
-    private final int lambdaParameterStartIndex;
+
+    private LambdaVariable lambdaVariable;
 
     private final Deque<Object> valueStack = new ArrayDeque<>();
     private final Deque<ConditionExpr> exprStack = new ArrayDeque<>();
@@ -61,159 +59,19 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             "java/time/OffsetTime", "java/time/OffsetDateTime", "java/time/ZonedDateTime"
     );
 
-    public LambdaPredicateVisitor(Metamodel metamodel, List<Class<?>> entityClasses, SerializedLambda serializedLambda, int accessFlags) {
+    public LambdaPredicateVisitor(SerializedLambda serializedLambda, LambdaVariable lambdaVariable, Metamodel metamodel, int accessFlags) {
         super(ASM9);
+
         this.metamodel = metamodel;
-        this.entityClasses = entityClasses;
+        this.entityClasses = lambdaVariable.getEntityClasses();
         this.serializedLambda = serializedLambda;
-        this.accessFlags = accessFlags;
+        
+        //FIXME 추후 제거, 런타임에 분석정보를 받도록 수정
+        this.lambdaVariable = lambdaVariable;
 
-        if ((accessFlags & Opcodes.ACC_STATIC) == 0) {
-            System.out.println("🧩 Detected NON-static lambda");
-        } else {
-            System.out.println("🧩 Detected STATIC lambda");
-        }
-
-        boolean isStatic = (accessFlags & Opcodes.ACC_STATIC) != 0;
-
-        //캡쳐된 로컬 변수
-        this.capturedValues = new HashMap<>(serializedLambda.getCapturedArgCount());
-        int nextIndex = 0;
-        for (int i = 0; i < serializedLambda.getCapturedArgCount(); i++) {
-            Object captured = serializedLambda.getCapturedArg(i);
-            String capturingClass = serializedLambda.getCapturingClass();
-            System.out.println("Captured value: " + capturingClass + " = " + captured+ " index: " + i+ " next "+nextIndex+ " class: " + capturingClass);
-            if(i == 0 && !isStatic) {
-                //첫번째 인자에 호출측 this가 들어감
-                capturedValues.put(0, new CapturedValue("this", captured));
-                nextIndex++;
-                continue;
-            }
-
-            CapturedValue capturedValue = new CapturedValue(capturingClass, captured);
-            capturedValues.put(nextIndex, capturedValue);
-            if(captured instanceof Long || captured instanceof Double) {
-                nextIndex +=2;
-            } else {
-                nextIndex++;
-            }
-        }
-        this.lambdaParameterStartIndex = nextIndex;
-
-        ManagedType<?> managedType = metamodel.managedType(entityClasses.get(0));
-        managedType.getAttributes().stream().forEach(attr-> {
-
-            if (attr instanceof SingularAttributeImpl) {
-                SingularAttributeImpl<?, ?> hAttr = (SingularAttributeImpl<?, ?>) attr;
-                System.out.println(hAttr);
-            }
-        });
-        EntityType<?> entity = metamodel.entity(entityClasses.get(0));
-        entity.getAttributes().forEach( a-> {
-                    System.out.println(a);
-            }
-        );
-
-        System.out.println("serializedLambda getCapturingClass: "+serializedLambda.getCapturingClass());
-        System.out.println("serializedLambda getFunctionalInterfaceClass: "+serializedLambda.getFunctionalInterfaceClass());
-        System.out.println("serializedLambda getFunctionalInterfaceMethodName: "+serializedLambda.getFunctionalInterfaceMethodName());
-        System.out.println("serializedLambda getFunctionalInterfaceMethodSignature: "+serializedLambda.getFunctionalInterfaceMethodSignature());
-        System.out.println("serializedLambda getImplClass: "+serializedLambda.getImplClass());
-        System.out.println("serializedLambda getImplMethodName: "+serializedLambda.getImplMethodName());
-        System.out.println("serializedLambda getImplMethodSignature: "+serializedLambda.getImplMethodSignature());
-        System.out.println("serializedLambda getInstantiatedMethodType: "+serializedLambda.getInstantiatedMethodType());
     }
 
-    private Object findVarInsn(int index) {
-        if (index < lambdaParameterStartIndex) {
-            return capturedValues.get(index);
-        } else {
-            return new ColumnEntity(entityClasses.get(index - lambdaParameterStartIndex));
-        }
-    }
 
-    private String resolveColumnNameRecursive(Class<?> currentClass, String fieldName, String prefix) {
-        try {
-            EntityType<?> entityType = metamodel.entity(currentClass);
-            Attribute<?, ?> attr = entityType.getAttribute(fieldName);
-
-            Member member = attr.getJavaMember();
-
-            if (member instanceof Method method) {
-                Column column = method.getAnnotation(Column.class);
-                if (column != null && !column.name().isEmpty()) {
-                    return prefix + column.name();
-                }
-                String name = method.getName();
-                if (name.startsWith("get") && name.length() > 3) {
-                    return prefix + Character.toLowerCase(name.charAt(3)) + name.substring(4);
-                } else if (name.startsWith("is") && name.length() > 2) {
-                    return prefix + Character.toLowerCase(name.charAt(2)) + name.substring(3);
-                }
-            } else if (member instanceof Field field) {
-                if (field.isAnnotationPresent(Embedded.class)) {
-                    Class<?> embeddedType = field.getType();
-                    valueStack.push(new EmbeddedContext(embeddedType, prefix + fieldName + "."));
-                    return null;
-                }
-                Column column = field.getAnnotation(Column.class);
-                if (column != null && !column.name().isEmpty()) {
-                    return prefix + column.name();
-                }
-                return prefix + field.getName();
-            }
-            return prefix + attr.getName();
-        } catch (IllegalArgumentException e) {
-            return prefix + fieldName;
-        }
-    }
-
-    private String resolveColumnNameFromGetter(String owner, String methodName) {
-//        if (!owner.replace("/", ".").equals(entityClass.getName())) {
-//            return null;
-//        }
-
-        String fieldName = null;
-        if (methodName.startsWith("get") && methodName.length() > 3) {
-            fieldName = Character.toLowerCase(methodName.charAt(3)) + methodName.substring(4);
-        } else if (methodName.startsWith("is") && methodName.length() > 2) {
-            fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
-        }
-
-//        if (fieldName != null) {
-//            return resolveColumnNameRecursive(entityClass, fieldName, "");
-//        }
-        return null;
-    }
-
-    private void pushBinaryExpr(Object left, BinaryOperator op, Object right) {
-        exprStack.push(new BinaryCondition(left.toString(), op.symbol, right));
-    }
-
-    private void pushLogicalExpr(LogicalOperator op, ConditionExpr... exprs) {
-        exprStack.push(new LogicalCondition(op, Arrays.asList(exprs)));
-    }
-
-    private ConditionExpr buildExpressionTree() {
-        if (exprStack.isEmpty()) return null;
-        List<ConditionExpr> exprs = new ArrayList<>();
-        while (!exprStack.isEmpty()) exprs.add(exprStack.pop());
-        Collections.reverse(exprs);
-        if (exprs.size() == 1) return exprs.get(0);
-        return new LogicalCondition(LogicalOperator.AND, exprs);
-    }
-
-    private String getFieldFromMethodName(String owner, String methodName) {
-//        if (!owner.replace("/", ".").equals(entityClass.getName())) return null;
-
-        String fieldName = null;
-        if (methodName.startsWith("get") && methodName.length() > 3)
-            fieldName = Character.toLowerCase(methodName.charAt(3)) + methodName.substring(4);
-        else if (methodName.startsWith("is") && methodName.length() > 2)
-            fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
-
-        return fieldName != null ? resolveColumnNameRecursive(entityClasses.get(0), fieldName, "") : null;
-    }
 
     /**
      * 메서드의 바이트코드 시작을 알립니다.
@@ -262,14 +120,24 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
     /**
      * 로컬 변수 로딩 및 저장 (ILOAD, ISTORE, ALOAD, ASTORE 등)
-     * @param opcode the opcode of the local variable instruction to be visited. This opcode is either
-     *     ILOAD, LLOAD, FLOAD, DLOAD, ALOAD, ISTORE, LSTORE, FSTORE, DSTORE, ASTORE or RET.
-     * @param varIndex the operand of the instruction to be visited. This operand is the index of a
-     *     local variable.
+     * @param opcode 로컬 변수 명령어의 opcode입니다. 이 opcode는 다음 중 하나일 수 있습니다:
+     *     - ILOAD: int 타입 로컬 변수를 스택에 로드합니다.
+     *     - LLOAD: long 타입 로컬 변수를 스택에 로드합니다.
+     *     - FLOAD: float 타입 로컬 변수를 스택에 로드합니다.
+     *     - DLOAD: double 타입 로컬 변수를 스택에 로드합니다.
+     *     - ALOAD: 참조 타입 로컬 변수를 스택에 로드합니다.
+     *     - ISTORE: 스택의 int 값을 로컬 변수에 저장합니다.
+     *     - LSTORE: 스택의 long 값을 로컬 변수에 저장합니다.
+     *     - FSTORE: 스택의 float 값을 로컬 변수에 저장합니다.
+     *     - DSTORE: 스택의 double 값을 로컬 변수에 저장합니다.
+     *     - ASTORE: 스택의 참조 값을 로컬 변수에 저장합니다.
+     *     - RET: 특정 로컬 변수 인덱스에 저장된 jsr(jump to subroutine) 반환 주소로 복귀할 때 사용 (거의 사용 안 됨)
+     * @param varIndex 명령어의 피연산자입니다. 이 피연산자는 로컬 변수의 인덱스입니다.
      */
     @Override
     public void visitVarInsn(int opcode, int varIndex) {
-        System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex+ " value "+findVarInsn(varIndex));
+        System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex);
+        System.out.println(" >> value "+findVarInsn(varIndex));
         switch (opcode) {
             case ALOAD, ILOAD, LLOAD, FLOAD, DLOAD -> {
                 valueStack.push(findVarInsn(varIndex));
@@ -285,7 +153,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
                     // 에서 e.getId() == 1 부분의 e
                     System.out.println("   ALOAD: lambda variable " + varIndex);
-                    valueStack.push(new ColumnEntity(entityClasses.get(0)));
+                    valueStack.push(new LambdaEntity(entityClasses.get(0)));
                 }
             } case ILOAD, LLOAD, FLOAD, DLOAD  -> {
                 if(capturedValues.containsKey(varIndex)){
@@ -304,6 +172,10 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         }
     }
 
+    private Object findVarInsn(int varIndex) {
+        return lambdaVariable.getCapturedValueOpcodeIndex(varIndex);
+    }
+
     /**
      * 메서드 호출 (INVOKEVIRTUAL, INVOKESTATIC 등)
      *
@@ -316,6 +188,8 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
         System.out.println("📡 visitMethodInsn: owner=" + owner + ", name=" + name + ", desc=" + descriptor);
+
+
         //primitive unboxing 메서드 자동 생성 문제 해결
         if (isPrimitiveUnboxingMethod(opcode, owner, name)) {
             if (!valueStack.isEmpty()) {
@@ -328,7 +202,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             return;
         }
 
-        if (!valueStack.isEmpty() && valueStack.peek() instanceof EmbeddedContext embeddedContext) {
+        /*if (!valueStack.isEmpty() && valueStack.peek() instanceof EmbeddedContext embeddedContext) {
             valueStack.pop();
             String column = resolveColumnNameRecursive(
                     embeddedContext.embeddedClass,
@@ -337,7 +211,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             );
             if (column != null) valueStack.push(column);
             return;
-        }
+        }*/
 
         String resolvedLeft = getFieldFromMethodName(owner, name);
         if (resolvedLeft != null) {
@@ -539,12 +413,26 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      * 비교 연산자 기반 BinaryCondition 생성에 사용.
      * 예: IF_ICMPGT → > 연산 해석.
      *
-     * @param opcode the opcode of the type instruction to be visited. This opcode is either IFEQ,
-     *     IFNE, IFLT, IFGE, IFGT, IFLE,
-     *     IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPGE, IF_ICMPGT,
-     *     IF_ICMPLE, IF_ACMPEQ, IF_ACMPNE, GOTO, JSR, IFNULL or IFNONNULL.
-     * @param label the operand of the instruction to be visited. This operand is a label that
-     *     designates the instruction to which the jump instruction may jump.
+     * @param opcode 명령어의 opcode입니다. 이 opcode는 다음 중 하나일 수 있습니다:
+     *     - IFEQ: 스택의 값이 0인지 비교하여 조건 분기.
+     *     - IFNE: 스택의 값이 0이 아닌지 비교하여 조건 분기.
+     *     - IFLT: 스택의 값이 0보다 작은지 비교하여 조건 분기.
+     *     - IFGE: 스택의 값이 0보다 크거나 같은지 비교하여 조건 분기.
+     *     - IFGT: 스택의 값이 0보다 큰지 비교하여 조건 분기.
+     *     - IFLE: 스택의 값이 0보다 작거나 같은지 비교하여 조건 분기.
+     *     - IF_ICMPEQ: 두 int 값이 같은지 비교하여 조건 분기.
+     *     - IF_ICMPNE: 두 int 값이 다른지 비교하여 조건 분기.
+     *     - IF_ICMPLT: 두 int 값 중 왼쪽 값이 작은지 비교하여 조건 분기.
+     *     - IF_ICMPGE: 두 int 값 중 왼쪽 값이 크거나 같은지 비교하여 조건 분기.
+     *     - IF_ICMPGT: 두 int 값 중 왼쪽 값이 큰지 비교하여 조건 분기.
+     *     - IF_ICMPLE: 두 int 값 중 왼쪽 값이 작거나 같은지 비교하여 조건 분기.
+     *     - IF_ACMPEQ: 두 참조형 객체가 같은지 비교하여 조건 분기.
+     *     - IF_ACMPNE: 두 참조형 객체가 다른지 비교하여 조건 분기.
+     *     - GOTO: 무조건 지정된 라벨로 점프.
+     *     - JSR: 서브루틴 호출 (거의 사용되지 않음).
+     *     - IFNULL: 스택의 값이 null인지 비교하여 조건 분기.
+     *     - IFNONNULL: 스택의 값이 null이 아닌지 비교하여 조건 분기.
+     * @param label 명령어의 피연산자로, 점프 명령이 이동할 위치를 나타내는 라벨입니다.
      */
     @Override
     public void visitJumpInsn(int opcode, Label label) {
@@ -554,6 +442,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 //int, boolean, byte, char, short 는 내부적으로 모두 int로 변환되기 때문에
                 //별도 ICMP는 없고 바로 IF_ICMPxx 조건 분기 명령으로 처리
                 if (valueStack.size() < 2) {
+                    //비교 구문이므로 두개의 stack이 필요
                     System.err.println("❌ Stack too small at jump opcode: " + opcode);
                     new RuntimeException().printStackTrace();
                     return;
@@ -672,6 +561,88 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 ? all.get(0)
                 : new LogicalCondition(operator, all);
 //        return conditionExpr;
+    }
+
+    private String resolveColumnNameRecursive(Class<?> currentClass, String fieldName, String prefix) {
+        try {
+            EntityType<?> entityType = metamodel.entity(currentClass);
+            Attribute<?, ?> attr = entityType.getAttribute(fieldName);
+
+            Member member = attr.getJavaMember();
+
+            if (member instanceof Method method) {
+                Column column = method.getAnnotation(Column.class);
+                if (column != null && !column.name().isEmpty()) {
+                    return prefix + column.name();
+                }
+                String name = method.getName();
+                if (name.startsWith("get") && name.length() > 3) {
+                    return prefix + Character.toLowerCase(name.charAt(3)) + name.substring(4);
+                } else if (name.startsWith("is") && name.length() > 2) {
+                    return prefix + Character.toLowerCase(name.charAt(2)) + name.substring(3);
+                }
+            } else if (member instanceof Field field) {
+                if (field.isAnnotationPresent(Embedded.class)) {
+                    Class<?> embeddedType = field.getType();
+                    valueStack.push(new EmbeddedContext(embeddedType, prefix + fieldName + "."));
+                    return null;
+                }
+                Column column = field.getAnnotation(Column.class);
+                if (column != null && !column.name().isEmpty()) {
+                    return prefix + column.name();
+                }
+                return prefix + field.getName();
+            }
+            return prefix + attr.getName();
+        } catch (IllegalArgumentException e) {
+            return prefix + fieldName;
+        }
+    }
+
+    private String resolveColumnNameFromGetter(String owner, String methodName) {
+//        if (!owner.replace("/", ".").equals(entityClass.getName())) {
+//            return null;
+//        }
+
+        String fieldName = null;
+        if (methodName.startsWith("get") && methodName.length() > 3) {
+            fieldName = Character.toLowerCase(methodName.charAt(3)) + methodName.substring(4);
+        } else if (methodName.startsWith("is") && methodName.length() > 2) {
+            fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
+        }
+//        if (fieldName != null) {
+//            return resolveColumnNameRecursive(entityClass, fieldName, "");
+//        }
+        return null;
+    }
+
+    private void pushBinaryExpr(Object left, BinaryOperator op, Object right) {
+        exprStack.push(new BinaryCondition(left.toString(), op.symbol, right));
+    }
+
+    private void pushLogicalExpr(LogicalOperator op, ConditionExpr... exprs) {
+        exprStack.push(new LogicalCondition(op, Arrays.asList(exprs)));
+    }
+
+    private ConditionExpr buildExpressionTree() {
+        if (exprStack.isEmpty()) return null;
+        List<ConditionExpr> exprs = new ArrayList<>();
+        while (!exprStack.isEmpty()) exprs.add(exprStack.pop());
+        Collections.reverse(exprs);
+        if (exprs.size() == 1) return exprs.get(0);
+        return new LogicalCondition(LogicalOperator.AND, exprs);
+    }
+
+    private String getFieldFromMethodName(String owner, String methodName) {
+//        if (!owner.replace("/", ".").equals(entityClass.getName())) return null;
+
+        String fieldName = null;
+        if (methodName.startsWith("get") && methodName.length() > 3)
+            fieldName = Character.toLowerCase(methodName.charAt(3)) + methodName.substring(4);
+        else if (methodName.startsWith("is") && methodName.length() > 2)
+            fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
+
+        return fieldName != null ? resolveColumnNameRecursive(entityClasses.get(0), fieldName, "") : null;
     }
 
     private boolean isPrimitiveUnboxingMethod(int opcode, String owner, String name) {

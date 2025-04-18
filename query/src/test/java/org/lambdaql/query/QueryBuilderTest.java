@@ -69,6 +69,66 @@ class QueryBuilderTest {
     }
 
     @Test
+    void selectVarIndexTest1() {
+        long param1 = 70;
+        int param2 = 90;
+        float param3 = 120;
+        double param4 = 130;
+        String param5 = "test";
+        boolean param6 = true;
+        short param7 = 10;
+        byte param8 = 11;
+        int[] param9 = {1, 2, 3};
+        Object param10 = new Object();
+        Object param11 = 200L;
+        Long param12 = null;
+        int param13 = 300;
+
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+        query.where(o->
+                        o.getId() == param1
+        );
+        /*query.where(o->
+                o.getId() == param1
+        );
+        query.where(o->
+                o.getId() == param2
+        );
+        query.where(o->
+                o.getId() == param3
+        );
+        query.where(o->
+                o.getId() == param4
+        );
+        query.where(o->
+                o.getDescription().equals(param5)
+        );
+        query.where(o->
+                o.isActive() == param6
+        );
+        query.where(o->
+                o.getId() == param7
+        );
+        query.where(o->
+                o.getId() == param8
+        );*/
+//        query.where(o->
+//                o.getId().equals(param10)
+//        );
+
+        query.where(o->
+                o.getId() == param11
+        );
+
+        query.where(o->
+                o.getId() == param12
+        );
+
+        System.out.println("test");
+    }
+
+    @Test
     void selectVarIndexTest() {
         long param1 = 70;
         int param2 = 90;
@@ -79,12 +139,29 @@ class QueryBuilderTest {
         short param7 = 10;
         byte param8 = 11;
         int[] param9 = {1, 2, 3};
+        Object param10 = new Object();
+        Object param11 = 200L;
+        Long param12 = null;
+        int param13 = 300;
 
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
 
-        SelectQuery<Order> where1 = query.where(o -> o.getId() == nonStaticLambda || o.getId() == param1 || o.getId() == param2
-                || o.getId() == param3||  o.getId() == param4);
+        SelectQuery<Order> where1 = query.where(o -> o.getId() == nonStaticLambda
+                || o.getId() == param1
+                || o.getId() == param2
+                || o.getTex() == param3
+                ||  o.getPrice() == param4
+                ||  o.getDescription().equals(param5)
+                ||  o.isActive() == param6
+                ||  o.getStatus() == param7
+                ||  o.getId() == param8
+//                ||  o.getImage() == param9
+                ||  o.getId() == ((Long) param10)
+                ||  o.getId() == param11
+                ||  o.getId() == param12
+                ||  o.getId() == (long)param13
+        );
         System.out.println(where1.toString());
     }
 
@@ -111,7 +188,7 @@ class QueryBuilderTest {
         long param2 = 90;
         long param3 = 120;
         Order order = new Order();
-        order.setId(10);
+        order.setId(10L);
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
 
@@ -134,7 +211,7 @@ class QueryBuilderTest {
     void update() {
         int param1 = 70;
         Order order = new Order();
-        order.setId(10);
+        order.setId(10L);
         Customer customer = new Customer(1, "Bob", List.of(order));
         JinqJPAStreamProvider streams =
                 new JinqJPAStreamProvider(entityManagerFactory);

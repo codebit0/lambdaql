@@ -1,4 +1,7 @@
 package org.lambdaql.query;
 
-public record CapturedValue(String klass, Object value) {
+import java.lang.reflect.Type;
+
+public record CapturedValue(Type type, Object value, int capturedIndex, int opcodeIndex) {
+
 }
