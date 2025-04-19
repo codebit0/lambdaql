@@ -5,9 +5,7 @@ import jakarta.persistence.Embedded;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
-import org.lambdaql.query.lambda.LambdaEntity;
-import org.lambdaql.query.lambda.LambdaVariableAnalyzer;
-import org.lambdaql.query.lambda.MethodSignature;
+import org.lambdaql.query.lambda.*;
 import org.objectweb.asm.*;
 
 import java.lang.invoke.SerializedLambda;
@@ -155,7 +153,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
                     // 에서 e.getId() == 1 부분의 e
                     System.out.println("   ALOAD: lambda variable " + varIndex);
-                    valueStack.push(new LambdaEntity(entityClasses.get(0)));
+                    valueStack.push(new LambdaEntityValue(entityClasses.get(0)));
                 }
             } case ILOAD, LLOAD, FLOAD, DLOAD  -> {
                 if(capturedValues.containsKey(varIndex)){
@@ -174,7 +172,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         }
     }
 
-    private Object findVarInsn(int varIndex) {
+    private ICapturedValue findVarInsn(int varIndex) {
         return lambdaVariable.getCapturedValueOpcodeIndex(varIndex);
     }
 
@@ -204,34 +202,36 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             return;
         }
 
-        /*if (!valueStack.isEmpty() && valueStack.peek() instanceof EmbeddedContext embeddedContext) {
-            valueStack.pop();
-            String column = resolveColumnNameRecursive(
-                    embeddedContext.embeddedClass,
-                    name.startsWith("get") ? Character.toLowerCase(name.charAt(3)) + name.substring(4) : name,
-                    embeddedContext.prefix
-            );
-            if (column != null) valueStack.push(column);
-            return;
-        }*/
-        if(!valueStack.isEmpty() && valueStack.peek() instanceof LambdaEntity entity) {
-            // Entity Table Class 추출
-            valueStack.pop();
-            Class<?> type = entity.type();
-            System.out.println("   🔄 peek Entity Table Class : " + type);
-            if(type == null || !entity.value().equals(owner)) {
-                // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
-                System.err.println("⚠️ Entity Table Class is null: " + entity);
-                throw new UnsupportedOperationException("Entity Table Class does not matched: " + entity.type() + " != " + owner);
-            } else {
-                try {
-                    MethodSignature signature = MethodSignature.parse(descriptor);
-                    Method method = entity.type().getMethod(name, signature.parameterTypes());
-                }catch (Exception e) {
-                    throw new UnsupportedOperationException("Entity Table Class method Signature does not matched: " + entity.type() + "::" + name + " " + descriptor, e);
+        if (!valueStack.isEmpty()) {
+            switch (valueStack.peek()) {
+                case LambdaEntityValue entity -> {
+                    // Entity Table Class 추출
+                    valueStack.pop();
+                    Class<?> type = entity.type();
+                    System.out.println("   🔄 peek Entity Table Class : " + type);
+                    if (type == null || !entity.value().equals(owner)) {
+                        // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
+                        System.err.println("⚠️ Entity Table Class is null: " + entity);
+                        throw new UnsupportedOperationException("Entity Table Class does not matched: " + entity.type() + " != " + owner);
+                    } else {
+                        try {
+                            MethodSignature signature = MethodSignature.parse(descriptor);
+                            Method method = entity.type().getMethod(name, signature.parameterTypes());
+                            new MethodInvoke(entity, method);
+                        } catch (Exception e) {
+                            throw new UnsupportedOperationException("Entity Table Class method Signature does not matched: " + entity.type() + "::" + name + " " + descriptor, e);
+                        }
+                    }
+                }
+                case CapturedValue capturedValue -> {
+                    // valueStack이 비어있으면, 메서드 호출이 잘못된 경우
+                    return;
+                }
+                case null, default -> {
                 }
             }
         }
+
 
         String resolvedLeft = getFieldFromMethodName(owner, name);
         if (resolvedLeft != null) {

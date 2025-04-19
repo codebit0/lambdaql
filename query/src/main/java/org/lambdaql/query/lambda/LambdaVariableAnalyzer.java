@@ -56,9 +56,23 @@ public class LambdaVariableAnalyzer {
             CapturedValue capturedValue = new CapturedValue(type, captured, index, nextIndex);
             capturedValues.put(index, capturedValue);
 
+
             if(type == long.class || type == double.class) {
                 nextIndex +=2;
+            } else if(type == int.class || type == float.class || type == short.class || type == byte.class || type == char.class|| type == boolean.class) {
+                nextIndex++;
+            } else if(type == void.class) {
+                // do nothing
+            } else if(type.isArray()) {
+                // 배열 타입인 경우
+                Class<?> componentType = type.getComponentType();
+                if (componentType == long.class || componentType == double.class) {
+                    nextIndex += 2;
+                } else if (componentType == int.class || componentType == float.class || componentType == short.class || componentType == byte.class || componentType == char.class || componentType == boolean.class) {
+                    nextIndex++;
+                }
             } else {
+                // 객체 타입인 경우
                 nextIndex++;
             }
         }
@@ -68,7 +82,7 @@ public class LambdaVariableAnalyzer {
         int aliasIndex = 0;
         for(Class<?> entityClass : entityClasses) {
             System.out.println("Captured Entity: index: " + index+ " varIndex "+nextIndex+ " type: " + entityClass);
-            LambdaEntity entity = new LambdaEntity(entityClass, entityClass.getSimpleName().substring(0, 2).toLowerCase() + aliasIndex++, index, nextIndex++);
+            LambdaEntityValue entity = new LambdaEntityValue(entityClass, entityClass.getSimpleName().substring(0, 2).toLowerCase() + aliasIndex++, index, nextIndex++);
             capturedValues.put(index, entity);
             index++;
         }

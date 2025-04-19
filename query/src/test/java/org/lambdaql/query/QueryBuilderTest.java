@@ -19,6 +19,9 @@ import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Statement;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
 
@@ -205,6 +208,21 @@ class QueryBuilderTest {
         join.select((o, c)-> c.getName());
 
         //assertEquals("SELECT * FROM orders", queryBuilder.getQuery());
+    }
+
+    @Test
+    void selectWhereStack() {
+        long param1 = 70;
+        Order order = new Order();
+        order.setId(10L);
+        order.setDescription(" test ");
+        LocalDate localDate = LocalDate.now();
+        LocalTime localTime = LocalTime.now();
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+
+        SelectQuery<Order> where1 = query.where(o -> o.getId() == param1 && o.getDescription() == order.getDescription().trim() && o.getUpdateAt() == LocalDateTime.of(localDate, localTime.plusHours(10)));
+
     }
 
     @Test
