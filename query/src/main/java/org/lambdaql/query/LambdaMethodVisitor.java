@@ -4,11 +4,9 @@ import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.ManagedType;
 import jakarta.persistence.metamodel.Metamodel;
 import org.hibernate.metamodel.model.domain.internal.SingularAttributeImpl;
-import org.lambdaql.query.lambda.LambdaVariable;
+import org.lambdaql.query.lambda.LambdaVariableAnalyzer;
 import org.objectweb.asm.ClassVisitor;
-import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
-import org.objectweb.asm.Opcodes;
 
 
 import java.lang.invoke.SerializedLambda;
@@ -65,7 +63,7 @@ public class LambdaMethodVisitor extends ClassVisitor {
             System.out.println("serializedLambda getInstantiatedMethodType: "+serializedLambda.getInstantiatedMethodType());
 
             Field[] declaredFields = this.method.getDeclaringClass().getDeclaredFields();
-            LambdaVariable lambdaVariable = new LambdaVariable(this.method, serializedLambda, entityClasses, access);
+            LambdaVariableAnalyzer lambdaVariable = new LambdaVariableAnalyzer(this.method, serializedLambda, entityClasses, access);
 
             return new LambdaPredicateVisitor(serializedLambda, lambdaVariable, metamodel, access) {
                 @Override

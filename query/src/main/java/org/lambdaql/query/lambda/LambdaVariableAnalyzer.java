@@ -1,23 +1,21 @@
 package org.lambdaql.query.lambda;
 
 import lombok.Getter;
-import org.lambdaql.query.CapturedValue;
 import org.objectweb.asm.Opcodes;
 
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class LambdaVariable {
+public class LambdaVariableAnalyzer {
 
     /**
      * captured value의 순차 인덱스
      */
-    private final Map<Integer, CapturedValue> capturedValues =new HashMap<>();
+    private final Map<Integer, ICapturedValue> capturedValues =new HashMap<>();
 
     @Getter
     private final List<Class<?>> entityClasses;
@@ -31,7 +29,7 @@ public class LambdaVariable {
     @Getter
     private final int lambdaArgumentStartIndex;
 
-    public LambdaVariable(Method method, SerializedLambda serializedLambda, List<Class<?>> entityClasses, int accessFlags) {
+    public LambdaVariableAnalyzer(Method method, SerializedLambda serializedLambda, List<Class<?>> entityClasses, int accessFlags) {
         this.entityClasses = entityClasses;
         isStatic = (accessFlags & Opcodes.ACC_STATIC) != 0;
 
@@ -54,7 +52,6 @@ public class LambdaVariable {
                 nextIndex++;
                 continue;
             }*/
-
             Class<?> type = field.getType();
             CapturedValue capturedValue = new CapturedValue(type, captured, index, nextIndex);
             capturedValues.put(index, capturedValue);
@@ -71,19 +68,23 @@ public class LambdaVariable {
         int aliasIndex = 0;
         for(Class<?> entityClass : entityClasses) {
             System.out.println("Captured Entity: index: " + index+ " varIndex "+nextIndex+ " type: " + entityClass);
-            LambdaEntity entity = new LambdaEntity(entityClass, entityClass.getSimpleName().substring(0, 2).toLowerCase() + aliasIndex++);
-            CapturedValue capturedValue = new CapturedValue(LambdaEntity.class, entity, index, nextIndex++);
-            capturedValues.put(index, capturedValue);
+            LambdaEntity entity = new LambdaEntity(entityClass, entityClass.getSimpleName().substring(0, 2).toLowerCase() + aliasIndex++, index, nextIndex++);
+            capturedValues.put(index, entity);
             index++;
         }
     }
 
-    public CapturedValue getCapturedValue(int index) {
+    public ICapturedValue getCapturedValue(int index) {
         return capturedValues.get(index);
     }
 
-    public CapturedValue getCapturedValueOpcodeIndex(int opcodeIndex) {
-        return capturedValues.get(toCapturedIndex(opcodeIndex));
+    public ICapturedValue getCapturedValueOpcodeIndex(int opcodeIndex) {
+        for(ICapturedValue capturedValue : capturedValues.values()) {
+            if(capturedValue.opcodeIndex() == opcodeIndex) {
+                return capturedValue;
+            }
+        }
+        throw new IllegalArgumentException("Invalid opcode index:" + opcodeIndex);
     }
 
     public int size() {
@@ -93,23 +94,19 @@ public class LambdaVariable {
     /**
      * 분석 시점에 예상되는 인덱스 번호 반환
      * @param index 파라미터 호출 순번
-     * @return opcode 인덱스 번호
+     * @return opcode 런타임 스택 호출 호술 시점에 사용되는 인덱스 번호
      */
     public int toOpcodeIndex(int index) {
-        CapturedValue capturedValue = capturedValues.get(index);
+        ICapturedValue capturedValue = capturedValues.get(index);
         if(capturedValue != null) {
             return capturedValue.opcodeIndex();
         }
         throw new IllegalArgumentException("Invalid index:" + index);
     }
 
-    public int toCapturedIndex(int opcodeIndex) {
-        for(CapturedValue capturedValue : capturedValues.values()) {
-            if(capturedValue.opcodeIndex() == opcodeIndex) {
-                return capturedValue.capturedIndex();
-            }
-        }
-        throw new IllegalArgumentException("Invalid opcode index:" + opcodeIndex);
+    public int toSequenceIndex(int opcodeIndex) {
+        ICapturedValue value = getCapturedValueOpcodeIndex(opcodeIndex);
+        return value.sequenceIndex();
     }
 
     /**
@@ -118,7 +115,7 @@ public class LambdaVariable {
      * 이런 경우에 런타임 시점에 인덱스를 조정한다.
      * @param lambdaVariable 런타임에 분석된 lambdaVariable
      */
-    public void runtimeAdjustIndex(LambdaVariable lambdaVariable) {
+    public void runtimeAdjustIndex(LambdaVariableAnalyzer lambdaVariable) {
 
     }
 }

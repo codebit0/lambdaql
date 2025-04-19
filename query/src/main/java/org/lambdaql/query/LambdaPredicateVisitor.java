@@ -5,7 +5,9 @@ import jakarta.persistence.Embedded;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
-import org.lambdaql.query.lambda.LambdaVariable;
+import org.lambdaql.query.lambda.LambdaEntity;
+import org.lambdaql.query.lambda.LambdaVariableAnalyzer;
+import org.lambdaql.query.lambda.MethodSignature;
 import org.objectweb.asm.*;
 
 import java.lang.invoke.SerializedLambda;
@@ -25,7 +27,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     private final List<Class<?>> entityClasses;
     private final SerializedLambda serializedLambda;
 
-    private LambdaVariable lambdaVariable;
+    private LambdaVariableAnalyzer lambdaVariable;
 
     private final Deque<Object> valueStack = new ArrayDeque<>();
     private final Deque<ConditionExpr> exprStack = new ArrayDeque<>();
@@ -59,7 +61,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             "java/time/OffsetTime", "java/time/OffsetDateTime", "java/time/ZonedDateTime"
     );
 
-    public LambdaPredicateVisitor(SerializedLambda serializedLambda, LambdaVariable lambdaVariable, Metamodel metamodel, int accessFlags) {
+    public LambdaPredicateVisitor(SerializedLambda serializedLambda, LambdaVariableAnalyzer lambdaVariable, Metamodel metamodel, int accessFlags) {
         super(ASM9);
 
         this.metamodel = metamodel;
@@ -212,6 +214,24 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             if (column != null) valueStack.push(column);
             return;
         }*/
+        if(!valueStack.isEmpty() && valueStack.peek() instanceof LambdaEntity entity) {
+            // Entity Table Class 추출
+            valueStack.pop();
+            Class<?> type = entity.type();
+            System.out.println("   🔄 peek Entity Table Class : " + type);
+            if(type == null || !entity.value().equals(owner)) {
+                // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
+                System.err.println("⚠️ Entity Table Class is null: " + entity);
+                throw new UnsupportedOperationException("Entity Table Class does not matched: " + entity.type() + " != " + owner);
+            } else {
+                try {
+                    MethodSignature signature = MethodSignature.parse(descriptor);
+                    Method method = entity.type().getMethod(name, signature.parameterTypes());
+                }catch (Exception e) {
+                    throw new UnsupportedOperationException("Entity Table Class method Signature does not matched: " + entity.type() + "::" + name + " " + descriptor, e);
+                }
+            }
+        }
 
         String resolvedLeft = getFieldFromMethodName(owner, name);
         if (resolvedLeft != null) {
