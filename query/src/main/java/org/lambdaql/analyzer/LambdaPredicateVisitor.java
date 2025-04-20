@@ -210,7 +210,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     Class<?> type = entity.type();
                     System.out.println("   🔄 peek Entity Table Class : " + type);
                     //FIXME null 이 나올 가능성이 없는듯
-                    if (type == null || !entity.value().equals(owner)) {
+                    if (type == null || !entity.typeSignature().equals(owner)) {
                         // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
                         System.err.println("⚠️ Entity Table Class is null: " + entity);
                         throw new UnsupportedOperationException("Entity Table Class does not matched: " + entity.type() + " != " + owner);
@@ -230,7 +230,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     valueStack.pop();
                     Class<?> type = capturedValue.type();
                     System.out.println("   🔄 peek Entity Table Class : " + type);
-                    if (type == null || !capturedValue.value().equals(owner)) {
+                    if (type == null || !capturedValue.typeSignature().equals(owner)) {
                         // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
                         System.err.println("⚠️ ObjectCapturedValue is null: " + capturedValue);
                         throw new UnsupportedOperationException("ObjectCapturedValue does not matched: " + capturedValue.type() + " != " + owner);
