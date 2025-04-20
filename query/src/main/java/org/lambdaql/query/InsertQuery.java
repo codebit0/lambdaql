@@ -1,5 +1,9 @@
 package org.lambdaql.query;
 
+import org.lambdaql.analyzer.EntityColumnResolver;
+import org.lambdaql.analyzer.LambdaFieldExtractor;
+import org.lambdaql.analyzer.SerializableConsumer;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;

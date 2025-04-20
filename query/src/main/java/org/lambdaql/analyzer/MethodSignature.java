@@ -1,10 +1,6 @@
-package org.lambdaql.query.lambda;
+package org.lambdaql.analyzer;
 
 import org.objectweb.asm.Type;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public record MethodSignature(Class<?>[] parameterTypes, Class<?> returnType) {
 

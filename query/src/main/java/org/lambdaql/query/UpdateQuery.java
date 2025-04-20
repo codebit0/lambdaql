@@ -1,5 +1,9 @@
 package org.lambdaql.query;
 
+import org.lambdaql.analyzer.Condition;
+import org.lambdaql.analyzer.EntityColumnResolver;
+import org.lambdaql.analyzer.SerializableConsumer;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;

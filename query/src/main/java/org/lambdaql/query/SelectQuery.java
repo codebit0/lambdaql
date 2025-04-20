@@ -1,5 +1,10 @@
 package org.lambdaql.query;
 
+import org.lambdaql.analyzer.ConditionExpr;
+import org.lambdaql.analyzer.EntityColumnResolver;
+import org.lambdaql.analyzer.LambdaWhereAnalyzer;
+import org.lambdaql.analyzer.Renderer;
+
 import java.io.Serializable;
 import java.util.List;
 
@@ -81,7 +86,7 @@ public class SelectQuery<T> {
     public String toSql() {
         if (condition == null) return "";
         return "SELECT * FROM " + entityClass.getSimpleName().toLowerCase() +
-                " WHERE "+Renderer.toSql("");
+                " WHERE "+ Renderer.toSql("");
     }
 
 

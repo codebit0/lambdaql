@@ -1,4 +1,4 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 public class Condition {
     String field;

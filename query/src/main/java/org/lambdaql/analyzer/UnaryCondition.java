@@ -1,4 +1,4 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 /**
  * !isActive 단항 조건

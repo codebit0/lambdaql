@@ -1,10 +1,9 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.ManagedType;
 import jakarta.persistence.metamodel.Metamodel;
 import org.hibernate.metamodel.model.domain.internal.SingularAttributeImpl;
-import org.lambdaql.query.lambda.LambdaVariableAnalyzer;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 

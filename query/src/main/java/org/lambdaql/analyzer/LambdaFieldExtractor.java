@@ -1,4 +1,4 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 import aj.org.objectweb.asm.ClassReader;
 import aj.org.objectweb.asm.ClassVisitor;

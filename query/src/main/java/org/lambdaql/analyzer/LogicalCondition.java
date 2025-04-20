@@ -1,4 +1,4 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 import java.util.List;
 

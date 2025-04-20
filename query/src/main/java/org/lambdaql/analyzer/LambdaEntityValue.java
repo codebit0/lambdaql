@@ -1,4 +1,4 @@
-package org.lambdaql.query.lambda;
+package org.lambdaql.analyzer;
 
 /**
  * 람다 표현식에서 사용되는 엔티티 인자 분석 결과 클래스
@@ -8,9 +8,9 @@ package org.lambdaql.query.lambda;
  * @param sequenceIndex 호출 순서에 따른 인덱스 번호
  * @param opcodeIndex opcode 에서 지역변수 테이블을 참조하기 위한 인덱스 번호
  */
-public record LambdaEntityValue(Class<?> type, Object value, String alias, int sequenceIndex, int opcodeIndex) implements IColumn, ICapturedValue {
+public record LambdaEntityValue(Class<?> type, String typeSignature, Object value, int sequenceIndex, int opcodeIndex) implements IColumn, ICapturedValue {
 
     public LambdaEntityValue(Class<?> type, String alias, int sequenceIndex, int opcodeIndex) {
-        this(type,  type.getCanonicalName().replaceAll("\\.", "/"), alias, sequenceIndex, opcodeIndex);
+        this(type, type.getCanonicalName().replaceAll("\\.", "/"), alias, sequenceIndex, opcodeIndex);
     }
 }

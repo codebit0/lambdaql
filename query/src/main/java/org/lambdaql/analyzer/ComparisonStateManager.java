@@ -1,4 +1,4 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 import lombok.extern.slf4j.Slf4j;
 import org.objectweb.asm.Label;

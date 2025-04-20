@@ -1,4 +1,4 @@
-package org.lambdaql.query.lambda;
+package org.lambdaql.analyzer;
 
 /**
  * 피 연산자 인터페이스

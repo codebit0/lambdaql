@@ -1,4 +1,4 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 public class Renderer {
     public static String toSql(String sql) {

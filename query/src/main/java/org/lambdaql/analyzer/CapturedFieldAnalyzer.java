@@ -1,4 +1,4 @@
-package org.lambdaql.query.lambda;
+package org.lambdaql.analyzer;
 
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.FieldVisitor;

@@ -1,11 +1,10 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.metamodel.Attribute;
 import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
-import org.lambdaql.query.lambda.*;
 import org.objectweb.asm.*;
 
 import java.lang.invoke.SerializedLambda;
@@ -152,7 +151,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     // 로컬 변수 인덱스가 캡쳐된 값보다 크면, 람다 선언부 타입 변수
                     // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
                     // 에서 e.getId() == 1 부분의 e
-                    System.out.println("   ALOAD: lambda variable " + varIndex);
+                    System.out.println("   ALOAD: analyzer variable " + varIndex);
                     valueStack.push(new LambdaEntityValue(entityClasses.get(0)));
                 }
             } case ILOAD, LLOAD, FLOAD, DLOAD  -> {
@@ -166,7 +165,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     // 로컬 변수 인덱스가 캡쳐된 값보다 크면, 람다 선언부 타입 변수
                     // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
                     // 에서 e.getId() == 1 부분의 e
-                    System.out.println(OPCODES[opcode]+" : lambda variable load error" + varIndex);
+                    System.out.println(OPCODES[opcode]+" : analyzer variable load error" + varIndex);
                 }
             }*/
         }
@@ -193,8 +192,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         //primitive unboxing 메서드 자동 생성 문제 해결
         if (isPrimitiveUnboxingMethod(opcode, owner, name)) {
             if (!valueStack.isEmpty()) {
-                Object boxed = valueStack.pop();
-                valueStack.push(boxed); // 언박싱된 primitive 값을 푸시한다고 간주 (SQL 표현에는 영향 없음)
+//                Object boxed = valueStack.pop();
+//                valueStack.push(boxed); // 언박싱된 primitive 값을 푸시한다고 간주 (SQL 표현에는 영향 없음)
+                Object boxed = valueStack.peek();
                 System.out.println("   🔄 언박싱 처리: " + boxed);
             } else {
                 System.err.println("⚠️ valueStack is empty during unboxing: " + owner + "." + name);
@@ -209,6 +209,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     valueStack.pop();
                     Class<?> type = entity.type();
                     System.out.println("   🔄 peek Entity Table Class : " + type);
+                    //FIXME null 이 나올 가능성이 없는듯
                     if (type == null || !entity.value().equals(owner)) {
                         // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
                         System.err.println("⚠️ Entity Table Class is null: " + entity);
@@ -217,15 +218,39 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                         try {
                             MethodSignature signature = MethodSignature.parse(descriptor);
                             Method method = entity.type().getMethod(name, signature.parameterTypes());
-                            new MethodInvoke(entity, method);
+                            EntityExpression expression = new EntityExpression(entity, method);
+                            valueStack.push(expression);
                         } catch (Exception e) {
                             throw new UnsupportedOperationException("Entity Table Class method Signature does not matched: " + entity.type() + "::" + name + " " + descriptor, e);
                         }
                     }
-                }
-                case CapturedValue capturedValue -> {
-                    // valueStack이 비어있으면, 메서드 호출이 잘못된 경우
                     return;
+                }
+                case ObjectCapturedValue capturedValue -> {
+                    valueStack.pop();
+                    Class<?> type = capturedValue.type();
+                    System.out.println("   🔄 peek Entity Table Class : " + type);
+                    if (type == null || !capturedValue.value().equals(owner)) {
+                        // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
+                        System.err.println("⚠️ ObjectCapturedValue is null: " + capturedValue);
+                        throw new UnsupportedOperationException("ObjectCapturedValue does not matched: " + capturedValue.type() + " != " + owner);
+                    } else {
+                        try {
+                            MethodSignature signature = MethodSignature.parse(descriptor);
+                            Method method = capturedValue.type().getMethod(name, signature.parameterTypes());
+                            ExecuteExpression expression = new ExecuteExpression(capturedValue, method);
+                            valueStack.push(expression);
+                        } catch (Exception e) {
+                            throw new UnsupportedOperationException("Entity Table Class method Signature does not matched: " + capturedValue.type() + "::" + name + " " + descriptor, e);
+                        }
+                    }
+                    return;
+                }
+                case EntityExpression expression -> {
+
+                }
+                case ExecuteExpression expression -> {
+
                 }
                 case null, default -> {
                 }
@@ -233,11 +258,11 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         }
 
 
-        String resolvedLeft = getFieldFromMethodName(owner, name);
-        if (resolvedLeft != null) {
-            valueStack.push(resolvedLeft);
-            return;
-        }
+//        String resolvedLeft = getFieldFromMethodName(owner, name);
+//        if (resolvedLeft != null) {
+//            valueStack.push(resolvedLeft);
+//            return;
+//        }
 
         if (DATE_TYPES.contains(owner)) {
             Object right = valueStack.pop();

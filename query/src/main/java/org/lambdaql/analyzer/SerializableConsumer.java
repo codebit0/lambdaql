@@ -1,4 +1,4 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 import java.io.Serializable;
 import java.util.function.Consumer;

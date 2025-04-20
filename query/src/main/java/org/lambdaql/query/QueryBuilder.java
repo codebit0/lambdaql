@@ -3,6 +3,7 @@ package org.lambdaql.query;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.metamodel.Metamodel;
+import org.lambdaql.analyzer.EntityColumnResolver;
 
 public class QueryBuilder {
     private final EntityManagerFactory emf;

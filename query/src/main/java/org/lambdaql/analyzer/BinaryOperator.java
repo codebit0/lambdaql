@@ -1,4 +1,4 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 enum BinaryOperator {
     EQ("="), NE("<>"), LT("<"), LE("<="), GT(">"), GE(">="),

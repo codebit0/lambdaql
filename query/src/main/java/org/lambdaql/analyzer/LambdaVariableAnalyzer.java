@@ -1,4 +1,4 @@
-package org.lambdaql.query.lambda;
+package org.lambdaql.analyzer;
 
 import lombok.Getter;
 import org.objectweb.asm.Opcodes;
@@ -24,7 +24,7 @@ public class LambdaVariableAnalyzer {
     private final   boolean isStatic;
 
     /**
-     * lambda argument 시작 인덱스
+     * analyzer argument 시작 인덱스
      */
     @Getter
     private final int lambdaArgumentStartIndex;
@@ -53,7 +53,7 @@ public class LambdaVariableAnalyzer {
                 continue;
             }*/
             Class<?> type = field.getType();
-            CapturedValue capturedValue = new CapturedValue(type, captured, index, nextIndex);
+            ObjectCapturedValue capturedValue = new ObjectCapturedValue(type, captured, index, nextIndex);
             capturedValues.put(index, capturedValue);
 
 

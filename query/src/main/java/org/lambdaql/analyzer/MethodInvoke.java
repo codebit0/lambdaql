@@ -1,4 +1,4 @@
-package org.lambdaql.query.lambda;
+package org.lambdaql.analyzer;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;

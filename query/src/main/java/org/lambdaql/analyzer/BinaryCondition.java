@@ -1,4 +1,4 @@
-package org.lambdaql.query;
+package org.lambdaql.analyzer;
 
 /**
  * 두 개의 인자를 가지는 연산
