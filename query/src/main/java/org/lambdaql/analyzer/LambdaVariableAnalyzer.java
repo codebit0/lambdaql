@@ -56,10 +56,9 @@ public class LambdaVariableAnalyzer {
             ObjectCapturedValue capturedValue = new ObjectCapturedValue(type, captured, index, nextIndex);
             capturedValues.put(index, capturedValue);
 
-
             if(type == long.class || type == double.class) {
                 nextIndex +=2;
-            } else if(type == int.class || type == float.class || type == short.class || type == byte.class || type == char.class|| type == boolean.class) {
+            /*} else if(type == int.class || type == float.class || type == short.class || type == byte.class || type == char.class|| type == boolean.class) {
                 nextIndex++;
             } else if(type == void.class) {
                 // do nothing
@@ -70,7 +69,7 @@ public class LambdaVariableAnalyzer {
                     nextIndex += 2;
                 } else if (componentType == int.class || componentType == float.class || componentType == short.class || componentType == byte.class || componentType == char.class || componentType == boolean.class) {
                     nextIndex++;
-                }
+                }*/
             } else {
                 // 객체 타입인 경우
                 nextIndex++;

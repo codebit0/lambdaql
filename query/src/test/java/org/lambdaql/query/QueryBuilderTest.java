@@ -33,21 +33,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 @Slf4j
 class QueryBuilderTest {
 
-    @Configuration
-    @EnableAutoConfiguration
-    @EnableJpaRepositories(basePackages = {"org.lambdaql"}) // JPA 스캔
-    @EntityScan("org.lambdaql")
-    public static class TestContext {
-    }
-
     @Autowired
     DataSource dataSource;
-
     @Autowired
     private ResourceLoader resourceLoader;
-
     @Autowired
     private EntityManagerFactory entityManagerFactory;
+    private int nonStaticLambda = 100;
 
     @BeforeEach
     public void setUp() {
@@ -60,8 +52,6 @@ class QueryBuilderTest {
             throw new RuntimeException(e);
         }
     }
-
-    private int nonStaticLambda = 100;
 
     @Test
     void selectFromBasic() {
@@ -89,36 +79,36 @@ class QueryBuilderTest {
 
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
-        query.where(o->
-                        o.getId() == param1
-        );
-        /*query.where(o->
-                o.getId() == param1
-        );
-        query.where(o->
-                o.getId() == param2
-        );
-        query.where(o->
-                o.getId() == param3
-        );
-        query.where(o->
-                o.getId() == param4
-        );
-        query.where(o->
-                o.getDescription().equals(param5)
-        );
-        query.where(o->
-                o.isActive() == param6
-        );
-        query.where(o->
-                o.getId() == param7
-        );
-        query.where(o->
-                o.getId() == param8
-        );*/
 //        query.where(o->
-//                o.getId().equals(param10)
+//            o.getId() == param1
 //        );
+//        query.where(o->
+//                o.getId() == param1
+//        );
+//        query.where(o->
+//                o.getId() == param2
+//        );
+//        query.where(o->
+//                o.getId() == param3
+//        );
+//        query.where(o->
+//                o.getId() == param4
+//        );
+//        query.where(o->
+//                o.getDescription().equals(param5)
+//        );
+//        query.where(o->
+//                o.isActive() == param6
+//        );
+//        query.where(o->
+//                o.getId() == param7
+//        );
+//        query.where(o->
+//                o.getId() == param8
+//        );
+        query.where(o->
+                o.getImage().length == param9.length
+        );
 
         query.where(o->
                 o.getId() == param11
@@ -141,7 +131,7 @@ class QueryBuilderTest {
         boolean param6 = true;
         short param7 = 10;
         byte param8 = 11;
-        int[] param9 = {1, 2, 3};
+        long[] param9 = {1, 2, 3};
         Object param10 = new Object();
         Object param11 = 200L;
         Long param12 = null;
@@ -159,7 +149,7 @@ class QueryBuilderTest {
                 ||  o.isActive() == param6
                 ||  o.getStatus() == param7
                 ||  o.getId() == param8
-//                ||  o.getImage() == param9
+                ||  o.getImage().length == param9.length
                 ||  o.getId() == ((Long) param10)
                 ||  o.getId() == param11
                 ||  o.getId() == param12
@@ -222,7 +212,23 @@ class QueryBuilderTest {
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
 
         SelectQuery<Order> where1 = query.where(o -> o.getId() == param1 && o.getDescription() == order.getDescription().trim() && o.getUpdateAt() == LocalDateTime.of(localDate, localTime.plusHours(10)));
+    }
 
+
+    @Test
+    void selectWhereMethodStack() {
+        long param1 = 70;
+        Order order = new Order();
+        order.setId(10L);
+        order.setDescription(" test ");
+        LocalDate localDate = LocalDate.now();
+        LocalTime localTime = LocalTime.now();
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+        SelectQuery<Order> where1 = query.where(o -> o.getDescription().trim() == order.getDescription().trim());
+//        SelectQuery<Order> where2 = query.where(o -> LocalDateTime.of(localDate, localTime.plusHours(10)) == o.getUpdateAt());
+//        SelectQuery<Order> where1 = query.where(o -> o.getId() == param1 && o.getDescription() == order.getDescription().trim() && o.getUpdateAt() == LocalDateTime.of(localDate, localTime.plusHours(10)));
+        System.out.println(where1);
     }
 
     @Test
@@ -246,5 +252,12 @@ class QueryBuilderTest {
 
     @Test
     void insert() {
+    }
+
+    @Configuration
+    @EnableAutoConfiguration
+    @EnableJpaRepositories(basePackages = {"org.lambdaql"}) // JPA 스캔
+    @EntityScan("org.lambdaql")
+    public static class TestContext {
     }
 }

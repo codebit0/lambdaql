@@ -6,7 +6,7 @@ public interface ICapturedValue {
     /**
      * captured value의 타입
      */
-    Type type();
+    Class<?> type();
 
     /**
      * captured value의 타입을 / 로 변환한 문자열로 변환

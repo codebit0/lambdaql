@@ -7,6 +7,9 @@ import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
 import org.objectweb.asm.*;
 
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
@@ -209,7 +212,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     Class<?> type = entity.type();
                     System.out.println("   🔄 peek Entity Table Class : " + type);
                     //FIXME null 이 나올 가능성이 없는듯
-                    if (type == null || !entity.typeSignature().equals(owner)) {
+                    if (!entity.typeSignature().equals(owner)) {
                         // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
                         System.err.println("⚠️ Entity Table Class is null: " + entity);
                         throw new UnsupportedOperationException("Entity Table Class does not matched: " + entity.type() + " != " + owner);
@@ -246,7 +249,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     return;
                 }
                 case EntityExpression expression -> {
-
+                    System.out.println("   🔄 peek EntityExpression : " + expression);
                 }
                 case ExecuteExpression expression -> {
                     //expression.addArguments()
