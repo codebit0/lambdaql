@@ -188,7 +188,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     public void visitMethodInsn(int opcode, String owner, String name, String descriptor, boolean isInterface) {
         System.out.println("📡 visitMethodInsn: owner=" + owner + ", name=" + name + ", desc=" + descriptor);
 
-
         //primitive unboxing 메서드 자동 생성 문제 해결
         if (isPrimitiveUnboxingMethod(opcode, owner, name)) {
             if (!valueStack.isEmpty()) {
@@ -250,9 +249,11 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
                 }
                 case ExecuteExpression expression -> {
-
+                    //expression.addArguments()
                 }
-                case null, default -> {
+                default -> {
+                    //static method 호출
+
                 }
             }
         }
