@@ -7,9 +7,6 @@ import jakarta.persistence.metamodel.EntityType;
 import jakarta.persistence.metamodel.Metamodel;
 import org.objectweb.asm.*;
 
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
@@ -139,10 +136,10 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     @Override
     public void visitVarInsn(int opcode, int varIndex) {
         System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex);
-        System.out.println(" >> value "+findVarInsn(varIndex));
+        System.out.println(" >> value "+ findCaptureVarInsn(varIndex));
         switch (opcode) {
             case ALOAD, ILOAD, LLOAD, FLOAD, DLOAD -> {
-                valueStack.push(findVarInsn(varIndex));
+                valueStack.push(findCaptureVarInsn(varIndex));
             }
             default -> {
                 throw new UnsupportedOperationException("Unsupported opcode: " + OPCODES[opcode]);
@@ -174,7 +171,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         }
     }
 
-    private ICapturedValue findVarInsn(int varIndex) {
+    private ICapturedValue findCaptureVarInsn(int varIndex) {
         return lambdaVariable.getCapturedValueOpcodeIndex(varIndex);
     }
 
@@ -192,6 +189,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         System.out.println("📡 visitMethodInsn: owner=" + owner + ", name=" + name + ", desc=" + descriptor);
 
         //primitive unboxing 메서드 자동 생성 문제 해결
+        //TODO 추후 분리
         if (isPrimitiveUnboxingMethod(opcode, owner, name)) {
             if (!valueStack.isEmpty()) {
 //                Object boxed = valueStack.pop();
@@ -203,9 +201,20 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
             return;
         }
-
+        Method method1 = MethodSignature.parse(owner, name, descriptor, isInterface);
+        if((method1.getModifiers() & java.lang.reflect.Modifier.STATIC) != 0) {
+            //static method
+        }
         if (!valueStack.isEmpty()) {
-            switch (valueStack.peek()) {
+            Object value = valueStack.peek();
+            if(value instanceof ICapturedValue capturedValue) {
+                if (!capturedValue.typeSignature().equals(owner)) {
+
+                }
+
+            }
+
+            switch (value) {
                 case LambdaEntityValue entity -> {
                     // Entity Table Class 추출
                     valueStack.pop();
@@ -217,14 +226,10 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                         System.err.println("⚠️ Entity Table Class is null: " + entity);
                         throw new UnsupportedOperationException("Entity Table Class does not matched: " + entity.type() + " != " + owner);
                     } else {
-                        try {
-                            MethodSignature signature = MethodSignature.parse(descriptor);
-                            Method method = entity.type().getMethod(name, signature.parameterTypes());
-                            EntityExpression expression = new EntityExpression(entity, method);
-                            valueStack.push(expression);
-                        } catch (Exception e) {
-                            throw new UnsupportedOperationException("Entity Table Class method Signature does not matched: " + entity.type() + "::" + name + " " + descriptor, e);
-                        }
+                        Method method = MethodSignature.parse(owner, name, descriptor, isInterface);
+
+                        EntityExpression expression = new EntityExpression(entity, method);
+                        valueStack.push(expression);
                     }
                     return;
                 }
@@ -237,14 +242,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                         System.err.println("⚠️ ObjectCapturedValue is null: " + capturedValue);
                         throw new UnsupportedOperationException("ObjectCapturedValue does not matched: " + capturedValue.type() + " != " + owner);
                     } else {
-                        try {
-                            MethodSignature signature = MethodSignature.parse(descriptor);
-                            Method method = capturedValue.type().getMethod(name, signature.parameterTypes());
-                            ExecuteExpression expression = new ExecuteExpression(capturedValue, method);
-                            valueStack.push(expression);
-                        } catch (Exception e) {
-                            throw new UnsupportedOperationException("Entity Table Class method Signature does not matched: " + capturedValue.type() + "::" + name + " " + descriptor, e);
-                        }
+                        Method method = MethodSignature.parse(owner, name, descriptor, isInterface);
+                        ExecuteExpression expression = new ExecuteExpression(capturedValue, method);
+                        valueStack.push(expression);
                     }
                     return;
                 }
@@ -256,7 +256,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 }
                 default -> {
                     //static method 호출
-
+                    System.out.println("static");
                 }
             }
         }

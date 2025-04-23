@@ -2,20 +2,28 @@ package org.lambdaql.analyzer;
 
 import org.objectweb.asm.Type;
 
+import java.lang.reflect.Method;
+
 public record MethodSignature(Class<?>[] parameterTypes, Class<?> returnType) {
 
-    public static MethodSignature parse(String descriptor) throws ClassNotFoundException {
+    public static Method parse(String owner, String name, String descriptor, boolean isInterface)  {
         Type methodType = Type.getMethodType(descriptor);
 
+        String typeDescriptor = owner.replaceAll("/", ".");
         Type[] argumentTypes = methodType.getArgumentTypes();
         Class<?>[] parameterClasses = new Class<?>[argumentTypes.length];
 
-        for (int i = 0; i < argumentTypes.length; i++) {
-            parameterClasses[i] = typeToClass(argumentTypes[i]);
+        try {
+            Class<?> klass = Class.forName(typeDescriptor);
+            for (int i = 0; i < argumentTypes.length; i++) {
+                parameterClasses[i] = typeToClass(argumentTypes[i]);
+            }
+            Class<?> returnType = typeToClass(methodType.getReturnType());
+            Method method = klass.getMethod(name, parameterClasses);
+            return method;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        Class<?> returnType = typeToClass(methodType.getReturnType());
-
-        return new MethodSignature(parameterClasses, returnType);
     }
 
 

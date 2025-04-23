@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jinq.jpa.JinqJPAStreamProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.lambdaql.function.JpqlFunction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -228,6 +229,34 @@ class QueryBuilderTest {
         SelectQuery<Order> where1 = query.where(o -> o.getDescription().trim() == order.getDescription().trim());
 //        SelectQuery<Order> where2 = query.where(o -> LocalDateTime.of(localDate, localTime.plusHours(10)) == o.getUpdateAt());
 //        SelectQuery<Order> where1 = query.where(o -> o.getId() == param1 && o.getDescription() == order.getDescription().trim() && o.getUpdateAt() == LocalDateTime.of(localDate, localTime.plusHours(10)));
+        System.out.println(where1);
+    }
+
+    @Test
+    void selectWhereStaticMethodStack() {
+        long param1 = 70;
+
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+        SelectQuery<Order> where1 = query.where(obj -> JpqlFunction.isNull(obj));
+        query.where(JpqlFunction::isNull);
+//
+        System.out.println(where1);
+    }
+
+    @Test
+    void selectNewWhereStack() {
+        long param1 = 70;
+
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+        SelectQuery<Order> where1 = query.where(new SelectQuery.Where<Order>() {
+            @Override
+            public boolean clause(Order obj) {
+                return JpqlFunction.isNull(obj);
+            }
+        });
+//
         System.out.println(where1);
     }
 
