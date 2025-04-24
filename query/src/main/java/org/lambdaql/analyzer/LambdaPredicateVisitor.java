@@ -201,11 +201,39 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
             return;
         }
-        Method method1 = MethodSignature.parse(owner, name, descriptor, isInterface);
-        if((method1.getModifiers() & java.lang.reflect.Modifier.STATIC) != 0) {
+        MethodSignature methodSignature = MethodSignature.parse(owner, name, descriptor, isInterface);
+        if(methodSignature.isStatic()) {
             //static method
+            int paramCount = methodSignature.method().getParameterCount();
+            IOperand[] params = new IOperand[paramCount];
+            boolean isEntity = false;
+            for (int i = 0; i < paramCount; i++) {
+                Object value = valueStack.pop();
+                if(value instanceof LambdaEntityValue) {
+                    isEntity = true;
+                }
+                params[i] = (IOperand) value;
+            }
+            new MethodStack(null, methodSignature, params);
+        } else {
+            boolean isEntity = false;
+            Object o = valueStack.pop();
+            if(o instanceof LambdaEntityValue) {
+                isEntity = true;
+            }
+            int paramCount = methodSignature.method().getParameterCount();
+            IOperand[] params = new IOperand[paramCount];
+
+            for (int i = 0; i < paramCount; i++) {
+                Object value = valueStack.pop();
+
+                params[i] = (IOperand) value;
+            }
+            MethodStack methodStack = new MethodStack((IOperand) o, methodSignature, params);
+            methodStack.entity(isEntity);
         }
-        if (!valueStack.isEmpty()) {
+
+        /*if (!valueStack.isEmpty()) {
             Object value = valueStack.peek();
             if(value instanceof ICapturedValue capturedValue) {
                 if (!capturedValue.typeSignature().equals(owner)) {
@@ -216,6 +244,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
             switch (value) {
                 case LambdaEntityValue entity -> {
+                    if(methodSignature.isStatic()) {
+                        //static method
+                    }
                     // Entity Table Class 추출
                     valueStack.pop();
                     Class<?> type = entity.type();
@@ -226,9 +257,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                         System.err.println("⚠️ Entity Table Class is null: " + entity);
                         throw new UnsupportedOperationException("Entity Table Class does not matched: " + entity.type() + " != " + owner);
                     } else {
-                        Method method = MethodSignature.parse(owner, name, descriptor, isInterface);
+                        //MethodSignature methodSignature = MethodSignature.parse(owner, name, descriptor, isInterface);
 
-                        EntityExpression expression = new EntityExpression(entity, method);
+                        EntityExpression expression = new EntityExpression(entity, methodSignature.method());
                         valueStack.push(expression);
                     }
                     return;
@@ -242,8 +273,8 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                         System.err.println("⚠️ ObjectCapturedValue is null: " + capturedValue);
                         throw new UnsupportedOperationException("ObjectCapturedValue does not matched: " + capturedValue.type() + " != " + owner);
                     } else {
-                        Method method = MethodSignature.parse(owner, name, descriptor, isInterface);
-                        ExecuteExpression expression = new ExecuteExpression(capturedValue, method);
+
+                        ExecuteExpression expression = new ExecuteExpression(capturedValue, methodSignature.method());
                         valueStack.push(expression);
                     }
                     return;
@@ -259,7 +290,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     System.out.println("static");
                 }
             }
-        }
+        }*/
 
 
 //        String resolvedLeft = getFieldFromMethodName(owner, name);
@@ -531,6 +562,10 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             case GOTO -> {
                 System.out.println("🔁 GOTO encountered: jump to label " + label);
             }
+            case IFNONNULL -> {
+                System.out.println("🔁 IFNONNULL encountered: jump to label " + label);
+            }
+
 
             default -> {
                 throw new UnsupportedOperationException("Unsupported jump opcode: " + opcode);

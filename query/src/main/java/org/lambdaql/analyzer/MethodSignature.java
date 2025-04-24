@@ -4,9 +4,9 @@ import org.objectweb.asm.Type;
 
 import java.lang.reflect.Method;
 
-public record MethodSignature(Class<?>[] parameterTypes, Class<?> returnType) {
+public record MethodSignature(Method method, String typeDescriptor, boolean isStatic) {
 
-    public static Method parse(String owner, String name, String descriptor, boolean isInterface)  {
+    public static MethodSignature parse(String owner, String name, String descriptor, boolean isInterface)  {
         Type methodType = Type.getMethodType(descriptor);
 
         String typeDescriptor = owner.replaceAll("/", ".");
@@ -18,9 +18,10 @@ public record MethodSignature(Class<?>[] parameterTypes, Class<?> returnType) {
             for (int i = 0; i < argumentTypes.length; i++) {
                 parameterClasses[i] = typeToClass(argumentTypes[i]);
             }
-            Class<?> returnType = typeToClass(methodType.getReturnType());
-            Method method = klass.getMethod(name, parameterClasses);
-            return method;
+            //Class<?> returnType = typeToClass(methodType.getReturnType());
+            Method method = klass.getDeclaredMethod(name, parameterClasses);
+            boolean isStatic = (method.getModifiers() & java.lang.reflect.Modifier.STATIC) != 0;
+            return new MethodSignature( method, owner, isStatic);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

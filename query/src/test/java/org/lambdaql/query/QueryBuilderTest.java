@@ -232,14 +232,28 @@ class QueryBuilderTest {
         System.out.println(where1);
     }
 
+    boolean bool() {
+        return false;
+    }
+
     @Test
-    void selectWhereStaticMethodStack() {
-        long param1 = 70;
+    void selectWhereThisMethodStack() {
 
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
-        SelectQuery<Order> where1 = query.where(obj -> JpqlFunction.isNull(obj));
+        SelectQuery<Order> where1 = query.where(obj -> this.bool());
         query.where(JpqlFunction::isNull);
+//
+        System.out.println(where1);
+    }
+
+    @Test
+    void selectWhereStaticMethodStack() {
+
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
+        SelectQuery<Order> where1 = query.where(obj -> JpqlFunction.like("aaa", "aa%"));
+        //query.where(JpqlFunction::isNull);
 //
         System.out.println(where1);
     }
