@@ -5,7 +5,7 @@ package org.lambdaql.analyzer;
  * a > b → 좌측 피연산자 a, 우측 피연산자 b, 연산자 >
  * Binary Comparison Condition
  */
-public class BinaryCondition extends ConditionExpr {
+public class BinaryCondition extends ConditionExpression {
     public final String field;
     public final String operator;
     public final Object value;
@@ -15,5 +15,4 @@ public class BinaryCondition extends ConditionExpr {
         this.operator = operator;
         this.value = value;
     }
-
 }

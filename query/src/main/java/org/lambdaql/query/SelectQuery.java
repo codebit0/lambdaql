@@ -1,6 +1,6 @@
 package org.lambdaql.query;
 
-import org.lambdaql.analyzer.ConditionExpr;
+import org.lambdaql.analyzer.ConditionExpression;
 import org.lambdaql.analyzer.EntityColumnResolver;
 import org.lambdaql.analyzer.LambdaWhereAnalyzer;
 import org.lambdaql.analyzer.Renderer;
@@ -12,7 +12,7 @@ public class SelectQuery<T> {
 
     private final Class<T> entityClass;
     private final EntityColumnResolver columnResolver;
-    private ConditionExpr condition;
+    private ConditionExpression condition;
 
     @FunctionalInterface
     public interface Where<U> extends Serializable {
@@ -79,7 +79,7 @@ public class SelectQuery<T> {
         return this;
     }
 
-    public SelectQuery<T> having(ConditionExpr condition) {
+    public SelectQuery<T> having(ConditionExpression condition) {
         return this;
     }
 

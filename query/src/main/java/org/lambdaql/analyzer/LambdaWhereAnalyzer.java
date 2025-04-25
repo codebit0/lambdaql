@@ -19,7 +19,7 @@ public class LambdaWhereAnalyzer {
         this.entityClass = entityClass;
     }
 
-    public <T> ConditionExpr analyze(Where<T> whereClause) {
+    public <T> ConditionExpression analyze(Where<T> whereClause) {
         try {
             Method method = whereClause.getClass().getDeclaredMethod("writeReplace");
             method.setAccessible(true);

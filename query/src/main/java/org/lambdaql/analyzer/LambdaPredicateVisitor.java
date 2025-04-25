@@ -27,24 +27,24 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     private LambdaVariableAnalyzer lambdaVariable;
 
     private final Deque<Object> valueStack = new ArrayDeque<>();
-    private final Deque<ConditionExpr> exprStack = new ArrayDeque<>();
+    private final Deque<ConditionExpression> exprStack = new ArrayDeque<>();
     private final Deque<ConditionBlock> blockStack = new ArrayDeque<>();
-    private ConditionExpr conditionExpr;
+    private ConditionExpression conditionExpr;
 
     private final ComparisonStateManager stateManager = new ComparisonStateManager();
 
     private class ConditionBlock {
         private final LogicalOperator operator;
-        private final List<ConditionExpr> conditions = new ArrayList<>();
+        private final List<ConditionExpression> conditions = new ArrayList<>();
         private final List<Label> labels = new ArrayList<>();
 
         ConditionBlock(LogicalOperator operator) {
             this.operator = operator;
         }
 
-        ConditionExpr toExpressionTree() {
+        ConditionExpression toExpressionTree() {
             if (conditions.isEmpty()) return null;
-            ConditionExpr result = conditions.get(0);
+            ConditionExpression result = conditions.get(0);
             for (int i = 1; i < conditions.size(); i++) {
                 result = new LogicalCondition(operator, Arrays.asList(result, conditions.get(i)));
             }
@@ -152,7 +152,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
                     // 에서 e.getId() == 1 부분의 e
                     System.out.println("   ALOAD: analyzer variable " + varIndex);
-                    valueStack.push(new LambdaEntityValue(entityClasses.get(0)));
+                    valueStack.push(new EntityVariable(entityClasses.get(0)));
                 }
             } case ILOAD, LLOAD, FLOAD, DLOAD  -> {
                 if(capturedValues.containsKey(varIndex)){
@@ -171,7 +171,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         }
     }
 
-    private ICapturedValue findCaptureVarInsn(int varIndex) {
+    private ICapturedVariable findCaptureVarInsn(int varIndex) {
         return lambdaVariable.getCapturedValueOpcodeIndex(varIndex);
     }
 
@@ -203,39 +203,70 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         }
         MethodSignature methodSignature = MethodSignature.parse(owner, name, descriptor, isInterface);
         if(methodSignature.isStatic()) {
+            Object peek = valueStack.peek();
+            MethodStack beforeStack = null;
+            if(peek instanceof MethodStack) {
+                //stack 같은 자리에 쌓을 것이 므로 빼냄
+                beforeStack = (MethodStack) valueStack.pop();
+            }
             //static method
             int paramCount = methodSignature.method().getParameterCount();
             IOperand[] params = new IOperand[paramCount];
             boolean isEntity = false;
-            for (int i = 0; i < paramCount; i++) {
+            for (int i = paramCount -1; i >= 0; i--) {
                 Object value = valueStack.pop();
-                if(value instanceof LambdaEntityValue) {
+                if(value instanceof EntityVariable) {
                     isEntity = true;
                 }
                 params[i] = (IOperand) value;
             }
-            new MethodStack(null, methodSignature, params);
+            MethodStack methodStack = new MethodStack(null, methodSignature, params);
+            if(beforeStack != null) {
+                beforeStack.entity(isEntity);
+                beforeStack.addStack(methodStack);
+                valueStack.push(methodStack);
+            } else {
+                methodStack.entity(isEntity);
+                valueStack.push(methodStack);
+            }
+            return;
         } else {
-            boolean isEntity = false;
-            Object o = valueStack.pop();
-            if(o instanceof LambdaEntityValue) {
-                isEntity = true;
+            Object peek = valueStack.peek();
+            MethodStack beforeStack = null;
+            if(peek instanceof MethodStack) {
+                //stack 같은 자리에 쌓을 것이 므로 빼냄
+                beforeStack = (MethodStack) valueStack.pop();
             }
             int paramCount = methodSignature.method().getParameterCount();
             IOperand[] params = new IOperand[paramCount];
-
-            for (int i = 0; i < paramCount; i++) {
+            boolean isEntity =  false;
+            //stack 에서 역순으로 가져와야 함
+            for (int i = paramCount -1; i >= 0; i--) {
                 Object value = valueStack.pop();
-
+                if(value instanceof EntityVariable) {
+                    isEntity = true;
+                }
                 params[i] = (IOperand) value;
             }
+            Object o = valueStack.pop();
+            if(o instanceof EntityVariable) {
+                isEntity = true;
+            }
             MethodStack methodStack = new MethodStack((IOperand) o, methodSignature, params);
-            methodStack.entity(isEntity);
+            if(beforeStack != null) {
+                beforeStack.entity(isEntity);
+                beforeStack.addStack(methodStack);
+                valueStack.push(methodStack);
+            } else {
+                methodStack.entity(isEntity);
+                valueStack.push(methodStack);
+            }
+            return;
         }
 
         /*if (!valueStack.isEmpty()) {
             Object value = valueStack.peek();
-            if(value instanceof ICapturedValue capturedValue) {
+            if(value instanceof ICapturedVariable capturedValue) {
                 if (!capturedValue.typeSignature().equals(owner)) {
 
                 }
@@ -243,7 +274,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
 
             switch (value) {
-                case LambdaEntityValue entity -> {
+                case EntityVariable entity -> {
                     if(methodSignature.isStatic()) {
                         //static method
                     }
@@ -264,14 +295,14 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     }
                     return;
                 }
-                case ObjectCapturedValue capturedValue -> {
+                case ObjectCapturedVariable capturedValue -> {
                     valueStack.pop();
                     Class<?> type = capturedValue.type();
                     System.out.println("   🔄 peek Entity Table Class : " + type);
                     if (type == null || !capturedValue.typeSignature().equals(owner)) {
                         // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
-                        System.err.println("⚠️ ObjectCapturedValue is null: " + capturedValue);
-                        throw new UnsupportedOperationException("ObjectCapturedValue does not matched: " + capturedValue.type() + " != " + owner);
+                        System.err.println("⚠️ ObjectCapturedVariable is null: " + capturedValue);
+                        throw new UnsupportedOperationException("ObjectCapturedVariable does not matched: " + capturedValue.type() + " != " + owner);
                     } else {
 
                         ExecuteExpression expression = new ExecuteExpression(capturedValue, methodSignature.method());
@@ -299,7 +330,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 //            return;
 //        }
 
-        if (DATE_TYPES.contains(owner)) {
+        /*if (DATE_TYPES.contains(owner)) {
             Object right = valueStack.pop();
             Object left = valueStack.pop();
             switch (name) {
@@ -336,7 +367,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     pushBinaryExpr(field, BinaryOperator.LIKE, "%" + suffix);
                 }
             }
-        }
+        }*/
     }
 
     /**
@@ -550,7 +581,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 if (stateManager.hasPendingComparison()) {
 //                    BinaryOperator op = stateManager.resolveOperatorForOpcode(opcode);
 //                    ComparisonResult cr = stateManager.consumeComparison();
-//                    ConditionExpr expr = new BinaryCondition(cr.left().toString(), op.symbol, cr.right());
+//                    ConditionExpression expr = new BinaryCondition(cr.left().toString(), op.symbol, cr.right());
 //                    exprStack.push(expr);
                     stateManager.registerBranch(opcode, label);
                 }
@@ -631,9 +662,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         super.visitEnd();
     }
 
-    public ConditionExpr getConditionExpr() {
+    public ConditionExpression getConditionExpr() {
         if (exprStack.isEmpty()) return null;
-        List<ConditionExpr> all = new ArrayList<>(exprStack);
+        List<ConditionExpression> all = new ArrayList<>(exprStack);
         exprStack.clear();
 
         // 분기된 OR 조건이 포함되었는지 상태로 판단할 수 있다면 여기서 구분 처리 필요
@@ -704,13 +735,13 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         exprStack.push(new BinaryCondition(left.toString(), op.symbol, right));
     }
 
-    private void pushLogicalExpr(LogicalOperator op, ConditionExpr... exprs) {
+    private void pushLogicalExpr(LogicalOperator op, ConditionExpression... exprs) {
         exprStack.push(new LogicalCondition(op, Arrays.asList(exprs)));
     }
 
-    private ConditionExpr buildExpressionTree() {
+    private ConditionExpression buildExpressionTree() {
         if (exprStack.isEmpty()) return null;
-        List<ConditionExpr> exprs = new ArrayList<>();
+        List<ConditionExpression> exprs = new ArrayList<>();
         while (!exprStack.isEmpty()) exprs.add(exprStack.pop());
         Collections.reverse(exprs);
         if (exprs.size() == 1) return exprs.get(0);

@@ -15,7 +15,7 @@ public class LambdaVariableAnalyzer {
     /**
      * captured value의 순차 인덱스
      */
-    private final Map<Integer, ICapturedValue> capturedValues =new HashMap<>();
+    private final Map<Integer, ICapturedVariable> capturedValues =new HashMap<>();
 
     @Getter
     private final List<Class<?>> entityClasses;
@@ -53,7 +53,7 @@ public class LambdaVariableAnalyzer {
                 continue;
             }*/
             Class<?> type = field.getType();
-            ObjectCapturedValue capturedValue = new ObjectCapturedValue(type, captured, index, nextIndex);
+            ObjectCapturedVariable capturedValue = new ObjectCapturedVariable(type, captured, index, nextIndex);
             capturedValues.put(index, capturedValue);
 
             if(type == long.class || type == double.class) {
@@ -81,18 +81,18 @@ public class LambdaVariableAnalyzer {
         int aliasIndex = 0;
         for(Class<?> entityClass : entityClasses) {
             System.out.println("Captured Entity: index: " + index+ " varIndex "+nextIndex+ " type: " + entityClass);
-            LambdaEntityValue entity = new LambdaEntityValue(entityClass, entityClass.getSimpleName().substring(0, 2).toLowerCase() + aliasIndex++, index, nextIndex++);
+            EntityVariable entity = new EntityVariable(entityClass, entityClass.getSimpleName().substring(0, 2).toLowerCase() + aliasIndex++, index, nextIndex++);
             capturedValues.put(index, entity);
             index++;
         }
     }
 
-    public ICapturedValue getCapturedValue(int index) {
+    public ICapturedVariable getCapturedValue(int index) {
         return capturedValues.get(index);
     }
 
-    public ICapturedValue getCapturedValueOpcodeIndex(int opcodeIndex) {
-        for(ICapturedValue capturedValue : capturedValues.values()) {
+    public ICapturedVariable getCapturedValueOpcodeIndex(int opcodeIndex) {
+        for(ICapturedVariable capturedValue : capturedValues.values()) {
             if(capturedValue.opcodeIndex() == opcodeIndex) {
                 return capturedValue;
             }
@@ -110,7 +110,7 @@ public class LambdaVariableAnalyzer {
      * @return opcode 런타임 스택 호출 호술 시점에 사용되는 인덱스 번호
      */
     public int toOpcodeIndex(int index) {
-        ICapturedValue capturedValue = capturedValues.get(index);
+        ICapturedVariable capturedValue = capturedValues.get(index);
         if(capturedValue != null) {
             return capturedValue.opcodeIndex();
         }
@@ -118,7 +118,7 @@ public class LambdaVariableAnalyzer {
     }
 
     public int toSequenceIndex(int opcodeIndex) {
-        ICapturedValue value = getCapturedValueOpcodeIndex(opcodeIndex);
+        ICapturedVariable value = getCapturedValueOpcodeIndex(opcodeIndex);
         return value.sequenceIndex();
     }
 

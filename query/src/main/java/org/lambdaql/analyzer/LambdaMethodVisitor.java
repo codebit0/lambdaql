@@ -20,7 +20,7 @@ public class LambdaMethodVisitor extends ClassVisitor {
     private final Metamodel metamodel;
     private final List<Class<?>> entityClasses;
     private final SerializedLambda serializedLambda;
-    private ConditionExpr conditionExpr;
+    private ConditionExpression conditionExpr;
 
     private String implMethod;
 
@@ -75,7 +75,7 @@ public class LambdaMethodVisitor extends ClassVisitor {
         return null;
     }
 
-    public ConditionExpr getConditionExpr() {
+    public ConditionExpression getConditionExpr() {
         return conditionExpr;
     }
 }

@@ -8,17 +8,17 @@ import java.util.List;
 
 @Getter
 public class EntityExpression {
-    private final LambdaEntityValue entity;
+    private final EntityVariable entity;
     private final Method method;
     private final List<Object> arguments;
 
-    public EntityExpression(LambdaEntityValue entity, Method method, List<Object> arguments) {
+    public EntityExpression(EntityVariable entity, Method method, List<Object> arguments) {
         this.entity = entity;
         this.method = method;
         this.arguments = arguments;
     }
 
-    public EntityExpression(LambdaEntityValue entity, Method method) {
+    public EntityExpression(EntityVariable entity, Method method) {
         this.entity = entity;
         this.method = method;
         this.arguments = new ArrayList<>();

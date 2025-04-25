@@ -50,5 +50,8 @@ public class Order implements Serializable {
         this.product = product;
     }
 
+    public boolean items(int item, int quantity) {
+        return item == 1 && quantity > 0;
+    }
 
 }

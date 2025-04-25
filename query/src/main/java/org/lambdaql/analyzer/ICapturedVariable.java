@@ -1,8 +1,6 @@
 package org.lambdaql.analyzer;
 
-import java.lang.reflect.Type;
-
-public interface ICapturedValue extends IOperand, IValue {
+public interface ICapturedVariable extends IOperand, IValue {
     /**
      * captured value의 타입
      */
