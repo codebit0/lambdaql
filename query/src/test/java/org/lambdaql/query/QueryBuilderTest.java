@@ -204,7 +204,7 @@ class QueryBuilderTest {
     @Test
     void selectWhereStack() {
         long param1 = 70;
-        int param2 = 100;
+        short param2 = 100;
         Order order = new Order();
         order.setId(10L);
         order.setDescription(" test ");
@@ -213,7 +213,7 @@ class QueryBuilderTest {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.selectFrom(Order.class);
 
-        SelectQuery<Order> where1 = query.where(o -> o.items(param2, 2) && o.getId() == param1 && o.getDescription() == order.getDescription().trim() && o.getUpdateAt() == LocalDateTime.of(localDate, localTime.plusHours(10)));
+        SelectQuery<Order> where1 = query.where(o -> o.items(2, ((int)param2)+(100*2)) && o.getId() == param1 && o.getDescription() == order.getDescription().trim() && o.getUpdateAt() == LocalDateTime.of(localDate, localTime.plusHours(10)));
     }
 
     @Test

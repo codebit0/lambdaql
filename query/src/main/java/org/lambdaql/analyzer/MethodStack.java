@@ -4,20 +4,21 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
 @Accessors(fluent = true)
 public class MethodStack {
-    private final IOperand owner;
+    private final Object owner;
     private final MethodSignature signature;
-    private final IOperand[] args;
-    private List<Object> stacks;
+    private final Object[] args;
+    private List<Object> stacks = new ArrayList<>();
 
     @Setter
     private boolean entity = false;
 
-    public MethodStack(IOperand owner, MethodSignature signature, IOperand[] args) {
+    public MethodStack(Object owner, MethodSignature signature, Object[] args) {
         this.owner = owner;
         this.signature = signature;
         this.args = args;

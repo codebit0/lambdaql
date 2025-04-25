@@ -32,7 +32,7 @@ public class LambdaWhereAnalyzer {
                 return visitor.getConditionExpr();
             }
         } catch (Exception e) {
-            try {
+            /*try {
                 String name = whereClause.getClass().getCanonicalName();
                 if(name == null)
                     name = whereClause.getClass().getName();
@@ -59,7 +59,7 @@ public class LambdaWhereAnalyzer {
                 }, 0);
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
-            }
+            }*/
             e.printStackTrace();
         }
         throw new UnsupportedOperationException("Lambda parsing failed");

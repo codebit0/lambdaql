@@ -16,7 +16,7 @@ public class SelectQuery<T> {
 
     @FunctionalInterface
     public interface Where<U> extends Serializable {
-        boolean clause(U obj);
+        boolean clause(U obj) throws Exception;
     }
 
     @FunctionalInterface

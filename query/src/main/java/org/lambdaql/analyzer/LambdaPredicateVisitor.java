@@ -67,10 +67,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         
         //FIXME 추후 제거, 런타임에 분석정보를 받도록 수정
         this.lambdaVariable = lambdaVariable;
-
     }
-
-
 
     /**
      * 메서드의 바이트코드 시작을 알립니다.
@@ -78,7 +75,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitCode() {
-        System.out.println("//visitCode");
+        System.out.println("//visitCode start init");
         super.visitCode();
     }
 
@@ -94,7 +91,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         System.out.println("//visitFrame: type=" + type + ", numLocal=" + numLocal + ", local=" + Arrays.toString(local) +", numStack=" + numStack + ", stack=" + Arrays.toString(stack));
     }
 
-
     /**
      *
      * @param name 매개변수 이름 또는 제공되지 않은 경우 {@literal null}.
@@ -107,15 +103,15 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         System.out.println("visitParameter name:"+name + " access:"+access);
     }
 
-    /**
-     * Visits a non standard attribute of this method.
-     * @param attribute an attribute.
-     */
-    @Override
-    public void visitAttribute(org.objectweb.asm.Attribute attribute) {
-        super.visitAttribute(attribute);
-        System.out.println("visitAttribute: "+attribute);
-    }
+//    /**
+//     * Visits a non standard attribute of this method.
+//     * @param attribute an attribute.
+//     */
+//    @Override
+//    public void visitAttribute(org.objectweb.asm.Attribute attribute) {
+//        super.visitAttribute(attribute);
+//        System.out.println("visitAttribute: "+attribute);
+//    }
 
     /**
      * 로컬 변수 로딩 및 저장 (ILOAD, ISTORE, ALOAD, ASTORE 등)
@@ -204,7 +200,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         MethodSignature methodSignature = MethodSignature.parse(owner, name, descriptor, isInterface);
         boolean isStatic = methodSignature.isStatic();
         int paramCount = methodSignature.method().getParameterCount();
-        IOperand[] params = new IOperand[paramCount];
+        Object[] params = new Object[paramCount];
         boolean isEntity = false;
 
         Object peek = valueStack.peek();
@@ -220,17 +216,17 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             if (value instanceof EntityVariable) {
                 isEntity = true;
             }
-            params[i] = (IOperand) value;
+            params[i] = value;
         }
 
         // static 이 아니면 인스턴스 객체도 꺼내야 함
-        IOperand instance = null;
+        Object instance = null;
         if (!isStatic) {
             Object o = valueStack.pop();
             if (o instanceof EntityVariable) {
                 isEntity = true;
             }
-            instance = (IOperand) o;
+            instance = o;
         }
 
         MethodStack methodStack = new MethodStack(instance, methodSignature, params);
@@ -443,15 +439,36 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     @Override
     public void visitLdcInsn(Object cst) {
         System.out.println("💾 visitLdcInsn LDC: " + cst);
-        if (cst instanceof Date date) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            valueStack.push("'" + sdf.format(date) + "'");
-        } else if (cst instanceof TemporalAccessor time) {
-            valueStack.push("'" + time.toString().replace("T", " ") + "'");
-        } else {
-            valueStack.push(cst);
-        }
+//        if (cst instanceof Date date) {
+//            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+//            valueStack.push("'" + sdf.format(date) + "'");
+//        } else if (cst instanceof TemporalAccessor time) {
+//            valueStack.push("'" + time.toString().replace("T", " ") + "'");
+//        } else {
+//            valueStack.push(cst);
+//        }
+        valueStack.push(cst);
     }
+
+    /**
+     * 단일 int 피연산자를 갖는 명령어를 방문합니다.
+     *
+     * @param opcode 방문할 명령어의 opcode입니다. 이 opcode는 BIPUSH, SIPUSH 또는 NEWARRAY 중 하나입니다.
+     * @param operand 방문할 명령어의 피연산자입니다.<br>
+     *     opcode가 BIPUSH인 경우, operand 값은 Byte.MIN_VALUE와 Byte.MAX_VALUE 사이여야 합니다.
+     *     <br>
+     *     opcode가 SIPUSH인 경우, operand 값은 Short.MIN_VALUE와 Short.MAX_VALUE 사이여야 합니다.
+     *     <br>
+     *     opcode가 NEWARRAY인 경우, operand 값은 {@link Opcodes#T_BOOLEAN}, {@link
+     *     Opcodes#T_CHAR}, {@link Opcodes#T_FLOAT}, {@link Opcodes#T_DOUBLE}, {@link Opcodes#T_BYTE},
+     *     {@link Opcodes#T_SHORT}, {@link Opcodes#T_INT} 또는 {@link Opcodes#T_LONG} 중 하나여야 합니다.
+     */
+    @Override
+    public void visitIntInsn(final int opcode, final int operand) {
+        System.out.println("visitIntInsn "+opcode + " opcode=" + OPCODES[opcode] + ", operand=" + operand);
+        valueStack.push(operand);
+    }
+
 
     /**
      * 일반 명령 (IRETURN, IADD, ICONST_1, 등)
@@ -491,45 +508,64 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 }
             }
             case ICONST_2, ICONST_3, ICONST_4, ICONST_5 -> {
-                valueStack.push(opcode -3);
+                valueStack.push(opcode - (ICONST_5 - ICONST_2));
                 System.out.println("🧱 "+ OPCODES[opcode] +" → push "+(opcode -3));
             }
-            case LCONST_0 -> {
-                System.out.println("🧱 LCONST_0 → push 0L");
-                valueStack.push(0L);
+            case LCONST_0, LCONST_1 -> {
+                long l = opcode - LCONST_0;
+                System.out.println("🧱 LCONST_x → push "+l);
+                valueStack.push(l);
             }
-            case LCONST_1 -> {
-                System.out.println("🧱 LCONST_1 → push 1L");
-                valueStack.push(1L);
+            case FCONST_0, FCONST_1, FCONST_2 -> {
+                float f = opcode - FCONST_0;
+                System.out.println("🧱 FCONST_x → push "+f);
+                valueStack.push(f);
             }
-            case IADD, ISUB, IMUL, IDIV -> {
+            case DCONST_0, DCONST_1 -> {
+                double d = opcode - DCONST_0;
+                System.out.println("🧱 DCONST_x → push "+d);
+                valueStack.push(d);
+            }
+            case IADD, LADD, FADD, DADD, ISUB, LSUB, FSUB, DSUB,
+                 IMUL, LMUL, FMUL, DMUL, IDIV, LDIV, FDIV, DDIV,
+                 IREM, LREM, DREM, FREM,
+                 IAND, LAND, IOR, LOR, IXOR, LXOR-> {
                 Object right = valueStack.pop();
                 Object left = valueStack.pop();
-                String op = switch (opcode) {
-                    case IADD -> "+";
-                    case ISUB -> "-";
-                    case IMUL -> "*";
-                    case IDIV -> "/";
-                    default -> throw new IllegalStateException("Unexpected value: " + opcode);
-                };
-                valueStack.push("(" + left + " " + op + " " + right + ")");
+                BinaryOperator.fromOpcode(opcode);
+                BinaryCondition condition = BinaryCondition.of(left, BinaryOperator.fromOpcode(opcode), right);
+                valueStack.push(condition);
+                //valueStack.push("(" + left + " " + op + " " + right + ")");
             }
-            case IAND -> {
-                pushLogicalExpr(LogicalOperator.AND, exprStack.pop(), exprStack.pop());
+//            case IAND -> {
+//                pushLogicalExpr(LogicalOperator.AND, exprStack.pop(), exprStack.pop());
+//            }
+//            case IOR -> {
+//                pushLogicalExpr(LogicalOperator.OR, exprStack.pop(), exprStack.pop());
+//            }
+
+            case I2L, I2F, I2D, L2I, L2F, L2D, F2I, F2L, F2D, D2I,
+                 D2L, D2F, I2B, I2C, I2S -> {
+                //형변환
             }
-            case IOR -> {
-                pushLogicalExpr(LogicalOperator.OR, exprStack.pop(), exprStack.pop());
+            case FCMPG, FCMPL  -> {
+                //FCMPG or FCMPL + IFLT
+            }
+            case DCMPG, DCMPL -> {
+                //DCMPG or DCMPL + IFLT
             }
             case LCMP -> {
+                //long: LCMP + IFLT/IFGT
                 //LCMP는 항상 비교 조건으로 변환되어야 하므로, 조건 분기 없이 쓰이는 LCMP는 분석 대상에서 제외
                 //두 개의 long 값을 비교해서, 결과를 int로 푸시하는 비교 전용 명령어로 같으면 0, 왼쪽이 크면 1, 오른쪽이 크면 -1을 푸시합니다.
-                if (valueStack.size() < 2) {
-                    //값비교를 위해서는 항상 2개의 변수가 필요
-                    System.err.println("❌ LCMP: insufficient operands, stack=" + valueStack);
-                    return;
-                }
+//                if (valueStack.size() < 2) {
+//                    //값비교를 위해서는 항상 2개의 변수가 필요
+//                    System.err.println("❌ LCMP: insufficient operands, stack=" + valueStack);
+//                    return;
+//                }
                 Object right = valueStack.pop();
                 Object left = valueStack.pop();
+                BinaryCondition.of(left, BinaryOperator.NE, right);
                 //값 비교는 0,1,-1 을 반환하므로 IFXX lable 이 따라옴
                 stateManager.captureComparison(left, right);
                 System.out.println("🧮 LCMP → push ComparisonResult(" + left + ", " + right + ")");
@@ -629,8 +665,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 }
                 //stateManager.registerBranch(opcode, label);
             }
-            case IF_ACMPEQ -> {
+            case IF_ACMPEQ, IF_ACMPNE -> {
                 //TODO 참조형 레퍼런스 주소 비교를 id비교로 변경
+                System.out.println("🔁 " + OPCODES[opcode]+ " label=" + label);
             }
             case GOTO -> {
                 System.out.println("🔁 GOTO encountered: jump to label " + label);
@@ -647,21 +684,20 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     }
 
 
-
-    /**
-     * 예외 처리 블록 설정
-     * @param start the beginning of the exception handler's scope (inclusive).
-     * @param end the end of the exception handler's scope (exclusive).
-     * @param handler the beginning of the exception handler's code.
-     * @param type the internal name of the type of exceptions handled by the handler (see {@link
-     *     Type#getInternalName()}), or {@literal null} to catch any exceptions (for "finally"
-     *     blocks).
-     */
-    @Override
-    public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
-        System.out.println("🔄 visitTryCatchBlock: start=" + start + ", end=" + end + ", handler=" + handler + ", type=" + type);
-        super.visitTryCatchBlock(start, end, handler, type);
-    }
+//    /**
+//     * 예외 처리 블록 설정
+//     * @param start the beginning of the exception handler's scope (inclusive).
+//     * @param end the end of the exception handler's scope (exclusive).
+//     * @param handler the beginning of the exception handler's code.
+//     * @param type the internal name of the type of exceptions handled by the handler (see {@link
+//     *     Type#getInternalName()}), or {@literal null} to catch any exceptions (for "finally"
+//     *     blocks).
+//     */
+//    @Override
+//    public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
+//        System.out.println("🔄 visitTryCatchBlock: start=" + start + ", end=" + end + ", handler=" + handler + ", type=" + type);
+//        super.visitTryCatchBlock(start, end, handler, type);
+//    }
 
     /**
      * 로컬 변수 테이블을 방문합니다.
@@ -720,6 +756,237 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 //        return conditionExpr;
     }
 
+    // unsupport insn
+
+
+    /**
+     * 타입 명령어를 방문합니다. 타입 명령어는 클래스의 내부 이름(internal name)을 매개변수로 사용하는 명령어입니다
+     * (참조: {@link Type#getInternalName()}).
+     *
+     * @param opcode 방문할 타입 명령어의 opcode입니다. 이 opcode는 NEW, ANEWARRAY, CHECKCAST 또는 INSTANCEOF 중 하나입니다.
+     * @param type 방문할 명령어의 피연산자입니다. 이 피연산자는 객체나 배열 클래스의 내부 이름이어야 합니다
+     *            (참조: {@link Type#getInternalName()}).
+     */
+    @Override
+    public void visitTypeInsn(final int opcode, final String type) {
+        System.out.println("visitTypeInsn "+opcode + " opcode=" + OPCODES[opcode] + ", type=" + type);
+    }
+
+    /**
+     * 로컬 변수 슬롯에 있는 int 변수에 정수 값을 더하거나 뺄 때 사용
+     * i++ 또는 i += 1 같은 코드
+     * @param varIndex 로컬 변수 슬롯의 인덱스 (예: i가 몇 번 슬롯에 저장됐는지)
+     * @param increment 증가 또는 감소시킬 값 (음수면 감소)
+     */
+    public void visitIincInsn(final int varIndex, final int increment) {
+        System.out.println("visitIincInsn "+varIndex +  ", increment=" + increment);
+    }
+
+    /**
+     * 동적 호출(invokedynamic) 명령어를 방문합니다.
+     *
+     * @param name 메서드의 이름.
+     * @param descriptor 메서드의 서명(descriptor) ( {@link Type} 참조).
+     * @param bootstrapMethodHandle 부트스트랩 메서드 핸들.
+     * @param bootstrapMethodArguments 부트스트랩 메서드의 상수 인자들. 각 인자는 {@link Integer}, {@link Float}, {@link Long}, {@link Double}, {@link String}, {@link Type}, {@link Handle}, 또는 {@link ConstantDynamic} 값이어야 합니다. 이 메서드는 배열의 내용을 수정할 수 있으므로 호출자는 이 배열이 변경될 수 있음을 예상해야 합니다.
+     */
+    public void visitInvokeDynamicInsn(
+            final String name,
+            final String descriptor,
+            final Handle bootstrapMethodHandle,
+            final Object... bootstrapMethodArguments) {
+
+        System.out.println("visitInvokeDynamicInsn(name=" + name + ", descriptor=" + descriptor +
+                ", bootstrapMethodHandle=" + bootstrapMethodHandle +
+                ", bootstrapMethodArguments=" + Arrays.toString(bootstrapMethodArguments) + ")");
+    }
+
+
+    /**
+     * Visits a TABLESWITCH instruction.
+     * Java 바이트코드에서 tableswitch 명령어를 만났을 때 호출됩니다.
+     * 이 명령어는 switch 문 중에서도 case 값들이 연속된 정수 범위일 때 사용
+     * @param min the minimum key value.
+     * @param max the maximum key value.
+     * @param dflt beginning of the default handler block.
+     * @param labels beginnings of the handler blocks. {@code labels[i]} is the beginning of the
+     *     handler block for the {@code min + i} key.
+     */
+    public void visitTableSwitchInsn(
+            final int min, final int max, final Label dflt, final Label... labels) {
+        System.out.println("visitTableSwitchInsn "+min + " max=" + max + ", dflt=" + dflt);
+        throw new UnsupportedOperationException("visitTableSwitchInsn");
+    }
+
+    /**
+     * LOOKUPSWITCH 명령어를 방문합니다.
+     *
+     * @param dflt 기본 처리 블록의 시작 위치입니다.
+     * @param keys 키 값들입니다.
+     * @param labels 각 키에 해당하는 처리 블록들의 시작 위치입니다.
+     */
+    public void visitLookupSwitchInsn(final Label dflt, final int[] keys, final Label[] labels) {
+        System.out.println("visitLookupSwitchInsn 호출됨 | dflt: " + dflt + ", keys: " + Arrays.toString(keys) + ", labels: " + Arrays.toString(labels));
+    }
+
+    /**
+     * MULTIANEWARRAY 명령어를 방문합니다.
+     *
+     * @param descriptor 배열 타입 디스크립터입니다.
+     * @param numDimensions 생성할 배열의 차원 수입니다.
+     */
+    public void visitMultiANewArrayInsn(final String descriptor, final int numDimensions) {
+        System.out.println("visitMultiANewArrayInsn 호출됨 | descriptor: " + descriptor + ", numDimensions: " + numDimensions);
+    }
+
+    /**
+     * 명령어에 대한 애노테이션을 방문합니다. 이 메소드는 해당 명령어 직후에 호출되어야 합니다.
+     * 동일 명령어에 대해 여러 번 호출될 수 있습니다.
+     *
+     * @param typeRef 애노테이션 대상 타입 참조입니다.
+     * @param typePath 타입 내의 경로입니다.
+     * @param descriptor 애노테이션 클래스의 디스크립터입니다.
+     * @param visible 런타임에 애노테이션이 보이는지 여부입니다.
+     */
+    public AnnotationVisitor visitInsnAnnotation(final int typeRef, final TypePath typePath, final String descriptor, final boolean visible) {
+        System.out.println("visitInsnAnnotation 호출됨 | typeRef: " + typeRef + ", typePath: " + typePath + ", descriptor: " + descriptor + ", visible: " + visible);
+        return null;
+    }
+
+    /**
+     * try-catch 블록을 방문합니다.
+     *
+     * @param start 예외 핸들러 범위의 시작 (포함).
+     * @param end 예외 핸들러 범위의 끝 (제외).
+     * @param handler 예외 핸들러 코드의 시작.
+     * @param type 처리할 예외 타입의 내부 이름, null일 경우 모든 예외를 처리합니다 (finally 블록).
+     */
+    public void visitTryCatchBlock(final Label start, final Label end, final Label handler, final String type) {
+        System.out.println("visitTryCatchBlock 호출됨 | start: " + start + ", end: " + end + ", handler: " + handler + ", type: " + type);
+    }
+
+    /**
+     * 예외 핸들러 타입에 대한 애노테이션을 방문합니다. 반드시 visitTryCatchBlock 호출 이후에 호출되어야 합니다.
+     *
+     * @param typeRef 타입 참조입니다.
+     * @param typePath 타입 경로입니다.
+     * @param descriptor 애노테이션 클래스 디스크립터입니다.
+     * @param visible 런타임에 보이는지 여부입니다.
+     */
+    public AnnotationVisitor visitTryCatchAnnotation(final int typeRef, final TypePath typePath, final String descriptor, final boolean visible) {
+        System.out.println("visitTryCatchAnnotation 호출됨 | typeRef: " + typeRef + ", typePath: " + typePath + ", descriptor: " + descriptor + ", visible: " + visible);
+        return null;
+    }
+
+    /**
+     * 애노테이션 인터페이스 메소드의 기본 값을 방문합니다.
+     *
+     * @return 애노테이션 기본값을 방문할 visitor. visit 메소드는 정확히 한 번 호출되어야 하며, 이후 visitEnd가 따라야 합니다.
+     */
+    public AnnotationVisitor visitAnnotationDefault() {
+        System.out.println("visitAnnotationDefault 호출됨");
+        return null;
+    }
+
+    /**
+     * 메소드에 대한 애노테이션을 방문합니다.
+     *
+     * @param descriptor 애노테이션 클래스의 디스크립터입니다.
+     * @param visible 런타임에 보이는지 여부입니다.
+     */
+    public AnnotationVisitor visitAnnotation(final String descriptor, final boolean visible) {
+        System.out.println("visitAnnotation 호출됨 | descriptor: " + descriptor + ", visible: " + visible);
+        return null;
+    }
+
+    /**
+     * 메소드 시그니처의 타입에 대한 애노테이션을 방문합니다.
+     *
+     * @param typeRef 타입 참조입니다.
+     * @param typePath 타입 경로입니다.
+     * @param descriptor 애노테이션 클래스 디스크립터입니다.
+     * @param visible 런타임에 보이는지 여부입니다.
+     */
+    public AnnotationVisitor visitTypeAnnotation(final int typeRef, final TypePath typePath, final String descriptor, final boolean visible) {
+        System.out.println("visitTypeAnnotation 호출됨 | typeRef: " + typeRef + ", typePath: " + typePath + ", descriptor: " + descriptor + ", visible: " + visible);
+        return null;
+    }
+
+    /**
+     * 애노테이션을 가질 수 있는 메소드 파라미터 수를 방문합니다.
+     *
+     * @param parameterCount 애노테이션이 가능한 파라미터 수입니다.
+     * @param visible 런타임에 보이는지 여부입니다.
+     */
+    public void visitAnnotableParameterCount(final int parameterCount, final boolean visible) {
+        System.out.println("visitAnnotableParameterCount 호출됨 | parameterCount: " + parameterCount + ", visible: " + visible);
+    }
+
+    /**
+     * 메소드 파라미터에 대한 애노테이션을 방문합니다.
+     *
+     * @param parameter 파라미터 인덱스입니다.
+     * @param descriptor 애노테이션 클래스의 디스크립터입니다.
+     * @param visible 런타임에 보이는지 여부입니다.
+     */
+    public AnnotationVisitor visitParameterAnnotation(final int parameter, final String descriptor, final boolean visible) {
+        System.out.println("visitParameterAnnotation 호출됨 | parameter: " + parameter + ", descriptor: " + descriptor + ", visible: " + visible);
+        return null;
+    }
+
+    /**
+     * 메소드의 사용자 정의 속성을 방문합니다.
+     *
+     * @param attribute 속성입니다.
+     */
+    public void visitAttribute(final org.objectweb.asm.Attribute attribute) {
+        System.out.println("visitAttribute 호출됨 | attribute: " + attribute);
+    }
+
+    /**
+     * 지역 변수 타입에 대한 애노테이션을 방문합니다.
+     *
+     * @param typeRef 타입 참조입니다.
+     * @param typePath 타입 경로입니다.
+     * @param start 지역 변수 범위의 시작 지점들입니다.
+     * @param end 지역 변수 범위의 끝 지점들입니다.
+     * @param index 지역 변수 인덱스들입니다.
+     * @param descriptor 애노테이션 클래스 디스크립터입니다.
+     * @param visible 런타임에 보이는지 여부입니다.
+     */
+    public AnnotationVisitor visitLocalVariableAnnotation(
+            final int typeRef,
+            final TypePath typePath,
+            final Label[] start,
+            final Label[] end,
+            final int[] index,
+            final String descriptor,
+            final boolean visible) {
+        System.out.println("visitLocalVariableAnnotation 호출됨 | typeRef: " + typeRef + ", typePath: " + typePath + ", start: " + Arrays.toString(start) + ", end: " + Arrays.toString(end) + ", index: " + Arrays.toString(index) + ", descriptor: " + descriptor + ", visible: " + visible);
+        return null;
+    }
+
+    /**
+     * 라인 넘버 선언을 방문합니다.
+     *
+     * @param line 소스 파일의 라인 번호입니다.
+     * @param start 이 라인에 해당하는 첫 번째 명령어입니다.
+     */
+    public void visitLineNumber(final int line, final Label start) {
+        System.out.println("visitLineNumber 호출됨 | line: " + line + ", start: " + start);
+    }
+
+    /**
+     * 메소드의 최대 스택 크기와 지역 변수 수를 방문합니다.
+     *
+     * @param maxStack 최대 스택 크기입니다.
+     * @param maxLocals 최대 지역 변수 수입니다.
+     */
+    public void visitMaxs(final int maxStack, final int maxLocals) {
+        System.out.println("visitMaxs 호출됨 | maxStack: " + maxStack + ", maxLocals: " + maxLocals);
+    }
+
+
     private String resolveColumnNameRecursive(Class<?> currentClass, String fieldName, String prefix) {
         try {
             EntityType<?> entityType = metamodel.entity(currentClass);
@@ -774,7 +1041,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     }
 
     private void pushBinaryExpr(Object left, BinaryOperator op, Object right) {
-        exprStack.push(new BinaryCondition(left.toString(), op.symbol, right));
+        exprStack.push(new BinaryCondition(left.toString(), op, right));
     }
 
     private void pushLogicalExpr(LogicalOperator op, ConditionExpression... exprs) {
