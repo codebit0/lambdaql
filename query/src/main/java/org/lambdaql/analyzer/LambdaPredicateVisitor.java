@@ -202,6 +202,48 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             return;
         }
         MethodSignature methodSignature = MethodSignature.parse(owner, name, descriptor, isInterface);
+        boolean isStatic = methodSignature.isStatic();
+        int paramCount = methodSignature.method().getParameterCount();
+        IOperand[] params = new IOperand[paramCount];
+        boolean isEntity = false;
+
+        Object peek = valueStack.peek();
+        MethodStack beforeStack = null;
+        if (peek instanceof MethodStack) {
+            // 중간 스택 처리
+            beforeStack = (MethodStack) valueStack.pop();
+        }
+
+        // 파라미터 역순으로 스택에서 꺼내기
+        for (int i = paramCount - 1; i >= 0; i--) {
+            Object value = valueStack.pop();
+            if (value instanceof EntityVariable) {
+                isEntity = true;
+            }
+            params[i] = (IOperand) value;
+        }
+
+        // static 이 아니면 인스턴스 객체도 꺼내야 함
+        IOperand instance = null;
+        if (!isStatic) {
+            Object o = valueStack.pop();
+            if (o instanceof EntityVariable) {
+                isEntity = true;
+            }
+            instance = (IOperand) o;
+        }
+
+        MethodStack methodStack = new MethodStack(instance, methodSignature, params);
+        methodStack.entity(isEntity);
+
+        if (beforeStack != null) {
+            beforeStack.entity(isEntity);
+            beforeStack.addStack(methodStack);
+            valueStack.push(methodStack);
+        } else {
+            valueStack.push(methodStack);
+        }
+        /*MethodSignature methodSignature = MethodSignature.parse(owner, name, descriptor, isInterface);
         if(methodSignature.isStatic()) {
             Object peek = valueStack.peek();
             MethodStack beforeStack = null;
@@ -262,7 +304,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 valueStack.push(methodStack);
             }
             return;
-        }
+        }*/
 
         /*if (!valueStack.isEmpty()) {
             Object value = valueStack.peek();
