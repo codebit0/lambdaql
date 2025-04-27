@@ -1,9 +1,6 @@
 package org.lambdaql.analyzer;
 
-import jakarta.persistence.metamodel.EntityType;
-import jakarta.persistence.metamodel.ManagedType;
-import jakarta.persistence.metamodel.Metamodel;
-import org.hibernate.metamodel.model.domain.internal.SingularAttributeImpl;
+import org.lambdaql.query.QueryBuilder;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 
@@ -17,17 +14,18 @@ import static org.objectweb.asm.Opcodes.*;
 
 public class LambdaMethodVisitor extends ClassVisitor {
     private final Method method;
-    private final Metamodel metamodel;
+    private final QueryBuilder queryBuilder;
     private final List<Class<?>> entityClasses;
     private final SerializedLambda serializedLambda;
     private ConditionExpression conditionExpr;
 
-    private String implMethod;
+    private final String implMethod;
 
-    public LambdaMethodVisitor(Method method, SerializedLambda serializedLambda, List<Class<?>> entityClasses, Metamodel metamodel) {
+    public LambdaMethodVisitor(QueryBuilder queryBuilder, Method method, SerializedLambda serializedLambda, List<Class<?>> entityClasses) {
         super(ASM9);
+        this.queryBuilder = queryBuilder;
         this.method = method;
-        this.metamodel = metamodel;
+
         this.entityClasses = entityClasses;
         this.serializedLambda = serializedLambda;
         this.implMethod = serializedLambda.getImplMethodName();
@@ -38,7 +36,7 @@ public class LambdaMethodVisitor extends ClassVisitor {
         if (name.equals(implMethod)) {
             System.out.println(" > visitMethod: " + name + " " + desc+ " " + desc+ " signature " + signature+ " exceptions " + exceptions);
 
-            ManagedType<?> managedType = metamodel.managedType(entityClasses.getFirst());
+            /*ManagedType<?> managedType = metamodel.managedType(entityClasses.getFirst());
             managedType.getAttributes().stream().forEach(attr-> {
 
                 if (attr instanceof SingularAttributeImpl) {
@@ -59,12 +57,12 @@ public class LambdaMethodVisitor extends ClassVisitor {
             System.out.println("serializedLambda getImplClass: "+serializedLambda.getImplClass());
             System.out.println("serializedLambda getImplMethodName: "+serializedLambda.getImplMethodName());
             System.out.println("serializedLambda getImplMethodSignature: "+serializedLambda.getImplMethodSignature());
-            System.out.println("serializedLambda getInstantiatedMethodType: "+serializedLambda.getInstantiatedMethodType());
+            System.out.println("serializedLambda getInstantiatedMethodType: "+serializedLambda.getInstantiatedMethodType());*/
 
             Field[] declaredFields = this.method.getDeclaringClass().getDeclaredFields();
             LambdaVariableAnalyzer lambdaVariable = new LambdaVariableAnalyzer(this.method, serializedLambda, entityClasses, access);
 
-            return new LambdaPredicateVisitor(serializedLambda, lambdaVariable, metamodel, access) {
+            return new LambdaPredicateVisitor(queryBuilder, serializedLambda, lambdaVariable, access) {
                 @Override
                 public void visitEnd() {
                     conditionExpr = getConditionExpr();

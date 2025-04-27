@@ -5,7 +5,7 @@ import lombok.experimental.Accessors;
 
 import static org.objectweb.asm.Opcodes.*;
 
-enum BinaryOperator {
+public enum BinaryOperator {
     EQ("=", IFEQ, IF_ACMPEQ), NE("<>", IFNE, IF_ACMPNE), LT("<", IFLT),
     LE("<=", IFLE), GT(">", IFGT), GE(">=", IFGE),
     IS("IS", IF_ACMPEQ), IS_NOT("IS NOT", IF_ACMPNE),

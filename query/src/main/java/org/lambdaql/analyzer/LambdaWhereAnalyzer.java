@@ -1,21 +1,20 @@
 package org.lambdaql.analyzer;
 
+import org.lambdaql.query.QueryBuilder;
 import org.lambdaql.query.SelectQuery.Where;
-import jakarta.persistence.EntityManager;
 import org.objectweb.asm.*;
 
-import java.io.IOException;
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Method;
 import java.util.List;
 
 public class LambdaWhereAnalyzer {
 
-    private final EntityManager entityManager;
+    private final QueryBuilder queryBuilder;
     private final List<Class<?>> entityClass;
 
-    public LambdaWhereAnalyzer(EntityManager entityManager, List<Class<?>> entityClass) {
-        this.entityManager = entityManager;
+    public LambdaWhereAnalyzer(QueryBuilder queryBuilder, List<Class<?>> entityClass) {
+        this.queryBuilder = queryBuilder;
         this.entityClass = entityClass;
     }
 
@@ -27,7 +26,7 @@ public class LambdaWhereAnalyzer {
 
             if (serialized instanceof SerializedLambda sl) {
                 ClassReader reader = new ClassReader(sl.getImplClass().replace('/', '.'));
-                LambdaMethodVisitor visitor = new LambdaMethodVisitor(method, sl, entityClass, entityManager.getMetamodel());
+                LambdaMethodVisitor visitor = new LambdaMethodVisitor(queryBuilder, method, sl, entityClass);
                 reader.accept(visitor, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
                 return visitor.getConditionExpr();
             }

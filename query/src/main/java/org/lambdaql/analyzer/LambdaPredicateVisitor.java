@@ -1,18 +1,9 @@
 package org.lambdaql.analyzer;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
-import jakarta.persistence.metamodel.Attribute;
-import jakarta.persistence.metamodel.EntityType;
-import jakarta.persistence.metamodel.Metamodel;
+import org.lambdaql.query.QueryBuilder;
 import org.objectweb.asm.*;
 
 import java.lang.invoke.SerializedLambda;
-import java.lang.reflect.Field;
-import java.lang.reflect.Member;
-import java.lang.reflect.Method;
-import java.text.SimpleDateFormat;
-import java.time.temporal.TemporalAccessor;
 import java.util.*;
 
 import static org.objectweb.asm.Opcodes.*;
@@ -20,7 +11,7 @@ import static org.objectweb.asm.util.Printer.*;
 
 public class LambdaPredicateVisitor extends MethodVisitor {
 
-    private final Metamodel metamodel;
+    private final QueryBuilder queryBuilder;
     private final List<Class<?>> entityClasses;
     private final SerializedLambda serializedLambda;
 
@@ -28,40 +19,18 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
     private final Deque<Object> valueStack = new ArrayDeque<>();
     private final Deque<ConditionExpression> exprStack = new ArrayDeque<>();
-    private final Deque<ConditionBlock> blockStack = new ArrayDeque<>();
-    private ConditionExpression conditionExpr;
 
-    private final ComparisonStateManager stateManager = new ComparisonStateManager();
 
-    private class ConditionBlock {
-        private final LogicalOperator operator;
-        private final List<ConditionExpression> conditions = new ArrayList<>();
-        private final List<Label> labels = new ArrayList<>();
+//    private static final Set<String> DATE_TYPES = Set.of(
+//            "java/util/Date", "java/sql/Date", "java/sql/Time", "java/sql/Timestamp", "java/util/Calendar",
+//            "java/time/Instant", "java/time/LocalDate", "java/time/LocalTime", "java/time/LocalDateTime",
+//            "java/time/OffsetTime", "java/time/OffsetDateTime", "java/time/ZonedDateTime"
+//    );
 
-        ConditionBlock(LogicalOperator operator) {
-            this.operator = operator;
-        }
-
-        ConditionExpression toExpressionTree() {
-            if (conditions.isEmpty()) return null;
-            ConditionExpression result = conditions.get(0);
-            for (int i = 1; i < conditions.size(); i++) {
-                result = new LogicalCondition(operator, Arrays.asList(result, conditions.get(i)));
-            }
-            return result;
-        }
-    }
-
-    private static final Set<String> DATE_TYPES = Set.of(
-            "java/util/Date", "java/sql/Date", "java/sql/Time", "java/sql/Timestamp", "java/util/Calendar",
-            "java/time/Instant", "java/time/LocalDate", "java/time/LocalTime", "java/time/LocalDateTime",
-            "java/time/OffsetTime", "java/time/OffsetDateTime", "java/time/ZonedDateTime"
-    );
-
-    public LambdaPredicateVisitor(SerializedLambda serializedLambda, LambdaVariableAnalyzer lambdaVariable, Metamodel metamodel, int accessFlags) {
+    public LambdaPredicateVisitor(QueryBuilder queryBuilder, SerializedLambda serializedLambda, LambdaVariableAnalyzer lambdaVariable, int accessFlags) {
         super(ASM9);
 
-        this.metamodel = metamodel;
+        this.queryBuilder = queryBuilder;
         this.entityClasses = lambdaVariable.getEntityClasses();
         this.serializedLambda = serializedLambda;
         
@@ -103,16 +72,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         System.out.println("visitParameter name:"+name + " access:"+access);
     }
 
-//    /**
-//     * Visits a non standard attribute of this method.
-//     * @param attribute an attribute.
-//     */
-//    @Override
-//    public void visitAttribute(org.objectweb.asm.Attribute attribute) {
-//        super.visitAttribute(attribute);
-//        System.out.println("visitAttribute: "+attribute);
-//    }
-
     /**
      * 로컬 변수 로딩 및 저장 (ILOAD, ISTORE, ALOAD, ASTORE 등)
      * @param opcode 로컬 변수 명령어의 opcode입니다. 이 opcode는 다음 중 하나일 수 있습니다:
@@ -140,30 +99,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             default -> {
                 throw new UnsupportedOperationException("Unsupported opcode: " + OPCODES[opcode]);
             }
-
-            /*case ALOAD -> {
-                if ((capturedValues.isEmpty() && varIndex == 0)
-                        || varIndex > capturedValues.size()) {
-                    // 로컬 변수 인덱스가 캡쳐된 값보다 크면, 람다 선언부 타입 변수
-                    // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
-                    // 에서 e.getId() == 1 부분의 e
-                    System.out.println("   ALOAD: analyzer variable " + varIndex);
-                    valueStack.push(new EntityVariable(entityClasses.get(0)));
-                }
-            } case ILOAD, LLOAD, FLOAD, DLOAD  -> {
-                if(capturedValues.containsKey(varIndex)){
-                    // 캡쳐된 로컬 변수
-                    CapturedValue capturedValue = capturedValues.get(varIndex);
-                    Object value = capturedValue.value();
-                    System.out.println(OPCODES[opcode]+" : captured value " + varIndex + " = " + value);
-                    valueStack.push(value);
-                } else {
-                    // 로컬 변수 인덱스가 캡쳐된 값보다 크면, 람다 선언부 타입 변수
-                    // 예: Predicate<SomeEntity> predicate = e -> e.getId() == 1;
-                    // 에서 e.getId() == 1 부분의 e
-                    System.out.println(OPCODES[opcode]+" : analyzer variable load error" + varIndex);
-                }
-            }*/
         }
     }
 
@@ -239,134 +174,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         } else {
             valueStack.push(methodStack);
         }
-        /*MethodSignature methodSignature = MethodSignature.parse(owner, name, descriptor, isInterface);
-        if(methodSignature.isStatic()) {
-            Object peek = valueStack.peek();
-            MethodStack beforeStack = null;
-            if(peek instanceof MethodStack) {
-                //stack 같은 자리에 쌓을 것이 므로 빼냄
-                beforeStack = (MethodStack) valueStack.pop();
-            }
-            //static method
-            int paramCount = methodSignature.method().getParameterCount();
-            IOperand[] params = new IOperand[paramCount];
-            boolean isEntity = false;
-            for (int i = paramCount -1; i >= 0; i--) {
-                Object value = valueStack.pop();
-                if(value instanceof EntityVariable) {
-                    isEntity = true;
-                }
-                params[i] = (IOperand) value;
-            }
-            MethodStack methodStack = new MethodStack(null, methodSignature, params);
-            if(beforeStack != null) {
-                beforeStack.entity(isEntity);
-                beforeStack.addStack(methodStack);
-                valueStack.push(methodStack);
-            } else {
-                methodStack.entity(isEntity);
-                valueStack.push(methodStack);
-            }
-            return;
-        } else {
-            Object peek = valueStack.peek();
-            MethodStack beforeStack = null;
-            if(peek instanceof MethodStack) {
-                //stack 같은 자리에 쌓을 것이 므로 빼냄
-                beforeStack = (MethodStack) valueStack.pop();
-            }
-            int paramCount = methodSignature.method().getParameterCount();
-            IOperand[] params = new IOperand[paramCount];
-            boolean isEntity =  false;
-            //stack 에서 역순으로 가져와야 함
-            for (int i = paramCount -1; i >= 0; i--) {
-                Object value = valueStack.pop();
-                if(value instanceof EntityVariable) {
-                    isEntity = true;
-                }
-                params[i] = (IOperand) value;
-            }
-            Object o = valueStack.pop();
-            if(o instanceof EntityVariable) {
-                isEntity = true;
-            }
-            MethodStack methodStack = new MethodStack((IOperand) o, methodSignature, params);
-            if(beforeStack != null) {
-                beforeStack.entity(isEntity);
-                beforeStack.addStack(methodStack);
-                valueStack.push(methodStack);
-            } else {
-                methodStack.entity(isEntity);
-                valueStack.push(methodStack);
-            }
-            return;
-        }*/
 
-        /*if (!valueStack.isEmpty()) {
-            Object value = valueStack.peek();
-            if(value instanceof ICapturedVariable capturedValue) {
-                if (!capturedValue.typeSignature().equals(owner)) {
-
-                }
-
-            }
-
-            switch (value) {
-                case EntityVariable entity -> {
-                    if(methodSignature.isStatic()) {
-                        //static method
-                    }
-                    // Entity Table Class 추출
-                    valueStack.pop();
-                    Class<?> type = entity.type();
-                    System.out.println("   🔄 peek Entity Table Class : " + type);
-                    //FIXME null 이 나올 가능성이 없는듯
-                    if (!entity.typeSignature().equals(owner)) {
-                        // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
-                        System.err.println("⚠️ Entity Table Class is null: " + entity);
-                        throw new UnsupportedOperationException("Entity Table Class does not matched: " + entity.type() + " != " + owner);
-                    } else {
-                        //MethodSignature methodSignature = MethodSignature.parse(owner, name, descriptor, isInterface);
-
-                        EntityExpression expression = new EntityExpression(entity, methodSignature.method());
-                        valueStack.push(expression);
-                    }
-                    return;
-                }
-                case ObjectCapturedVariable capturedValue -> {
-                    valueStack.pop();
-                    Class<?> type = capturedValue.type();
-                    System.out.println("   🔄 peek Entity Table Class : " + type);
-                    if (type == null || !capturedValue.typeSignature().equals(owner)) {
-                        // Entity Table Class가 null이거나 타입이 일치 하지 않는 경우
-                        System.err.println("⚠️ ObjectCapturedVariable is null: " + capturedValue);
-                        throw new UnsupportedOperationException("ObjectCapturedVariable does not matched: " + capturedValue.type() + " != " + owner);
-                    } else {
-
-                        ExecuteExpression expression = new ExecuteExpression(capturedValue, methodSignature.method());
-                        valueStack.push(expression);
-                    }
-                    return;
-                }
-                case EntityExpression expression -> {
-                    System.out.println("   🔄 peek EntityExpression : " + expression);
-                }
-                case ExecuteExpression expression -> {
-                    //expression.addArguments()
-                }
-                default -> {
-                    //static method 호출
-                    System.out.println("static");
-                }
-            }
-        }*/
-
-
-//        String resolvedLeft = getFieldFromMethodName(owner, name);
-//        if (resolvedLeft != null) {
-//            valueStack.push(resolvedLeft);
-//            return;
-//        }
 
         /*if (DATE_TYPES.contains(owner)) {
             Object right = valueStack.pop();
@@ -422,7 +230,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     public void visitFieldInsn(int opcode, String owner, String name, String descriptor) {
         System.out.println("🏷 FieldInsn: " + owner + "." + name + " " + descriptor);
         if (opcode == GETFIELD) {
-            valueStack.push(resolveColumnNameRecursive(entityClasses.get(0), name, ""));
+            //valueStack.push(resolveColumnNameRecursive(entityClasses.get(0), name, ""));
         }
     }
 
@@ -493,19 +301,21 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             //상수값으로도 쓰이지만 lcmp류의 반환값으로도 사용됨
             case ICONST_0 -> {
                 System.out.println("🧱 ICONST_0 → push 0");
-                if (stateManager.hasPendingComparison()) {
-                    stateManager.setExpectedResult(false);
-                } else {
-                    valueStack.push(0);
-                }
+//                if (stateManager.hasPendingComparison()) {
+//                    stateManager.setExpectedResult(false);
+//                } else {
+//                    valueStack.push(0);
+//                }
+                valueStack.push(0);
             }
             case ICONST_1 -> {
                 System.out.println("🧱 ICONST_1 → push 1");
-                if (stateManager.hasPendingComparison()) {
-                    stateManager.setExpectedResult(true);
-                } else {
-                    valueStack.push(1);
-                }
+//                if (stateManager.hasPendingComparison()) {
+//                    stateManager.setExpectedResult(true);
+//                } else {
+//                    valueStack.push(1);
+//                }
+                valueStack.push(1);
             }
             case ICONST_2, ICONST_3, ICONST_4, ICONST_5 -> {
                 valueStack.push(opcode - (ICONST_5 - ICONST_2));
@@ -567,16 +377,12 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 Object left = valueStack.pop();
                 BinaryCondition.of(left, BinaryOperator.NE, right);
                 //값 비교는 0,1,-1 을 반환하므로 IFXX lable 이 따라옴
-                stateManager.captureComparison(left, right);
+//                stateManager.captureComparison(left, right);
                 System.out.println("🧮 LCMP → push ComparisonResult(" + left + ", " + right + ")");
             }
 //            case ICONST_0, ICONST_1 -> valueStack.push(opcode == ICONST_1);
             case IRETURN,ARETURN -> {
-                if (stateManager.hasPendingComparison()) {
-                    ComparisonResult cr = stateManager.consumeComparison();
-                    BinaryOperator op = stateManager.resolveFinalOperator();
-                    pushBinaryExpr(cr.left(), op, cr.right());
-                }
+
 //                if (exprStack.isEmpty()) {
 //                    System.err.println("❌ exprStack is empty at return");
 //                    conditionExpr = null;
@@ -656,13 +462,13 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             case IFEQ, IFNE, IFLT, IFLE, IFGT, IFGE -> {
                 //IFGT > , IFGE >=, IFLT <, IFLE <=, IFNE !=, IFEQ ==
                 System.out.println("🔍 "+ OPCODES[opcode] +" detected: opcode = " + opcode + ", label = "+ label + ", stack = " + valueStack);
-                if (stateManager.hasPendingComparison()) {
+//                if (stateManager.hasPendingComparison()) {
 //                    BinaryOperator op = stateManager.resolveOperatorForOpcode(opcode);
 //                    ComparisonResult cr = stateManager.consumeComparison();
 //                    ConditionExpression expr = new BinaryCondition(cr.left().toString(), op.symbol, cr.right());
 //                    exprStack.push(expr);
-                    stateManager.registerBranch(opcode, label);
-                }
+//                    stateManager.registerBranch(opcode, label);
+//                }
                 //stateManager.registerBranch(opcode, label);
             }
             case IF_ACMPEQ, IF_ACMPNE -> {
@@ -682,22 +488,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
         }
     }
-
-
-//    /**
-//     * 예외 처리 블록 설정
-//     * @param start the beginning of the exception handler's scope (inclusive).
-//     * @param end the end of the exception handler's scope (exclusive).
-//     * @param handler the beginning of the exception handler's code.
-//     * @param type the internal name of the type of exceptions handled by the handler (see {@link
-//     *     Type#getInternalName()}), or {@literal null} to catch any exceptions (for "finally"
-//     *     blocks).
-//     */
-//    @Override
-//    public void visitTryCatchBlock(Label start, Label end, Label handler, String type) {
-//        System.out.println("🔄 visitTryCatchBlock: start=" + start + ", end=" + end + ", handler=" + handler + ", type=" + type);
-//        super.visitTryCatchBlock(start, end, handler, type);
-//    }
 
     /**
      * 로컬 변수 테이블을 방문합니다.
@@ -723,7 +513,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     @Override
     public void visitLabel(Label label) {
         System.out.println("🏷 visitLabel: " + label);
-        stateManager.setCurrentLabel(label);
+//        stateManager.setCurrentLabel(label);
         super.visitLabel(label);
     }
 
@@ -734,9 +524,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitEnd() {
-        if (conditionExpr == null && !exprStack.isEmpty()) {
-            conditionExpr = exprStack.pop();
-        }
+//        if (conditionExpr == null && !exprStack.isEmpty()) {
+//            conditionExpr = exprStack.pop();
+//        }
         super.visitEnd();
     }
 
@@ -987,7 +777,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     }
 
 
-    private String resolveColumnNameRecursive(Class<?> currentClass, String fieldName, String prefix) {
+   /* private String resolveColumnNameRecursive(Class<?> currentClass, String fieldName, String prefix) {
         try {
             EntityType<?> entityType = metamodel.entity(currentClass);
             Attribute<?, ?> attr = entityType.getAttribute(fieldName);
@@ -1021,24 +811,24 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         } catch (IllegalArgumentException e) {
             return prefix + fieldName;
         }
-    }
+    }*/
 
-    private String resolveColumnNameFromGetter(String owner, String methodName) {
-//        if (!owner.replace("/", ".").equals(entityClass.getName())) {
-//            return null;
+//    private String resolveColumnNameFromGetter(String owner, String methodName) {
+////        if (!owner.replace("/", ".").equals(entityClass.getName())) {
+////            return null;
+////        }
+//
+//        String fieldName = null;
+//        if (methodName.startsWith("get") && methodName.length() > 3) {
+//            fieldName = Character.toLowerCase(methodName.charAt(3)) + methodName.substring(4);
+//        } else if (methodName.startsWith("is") && methodName.length() > 2) {
+//            fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
 //        }
-
-        String fieldName = null;
-        if (methodName.startsWith("get") && methodName.length() > 3) {
-            fieldName = Character.toLowerCase(methodName.charAt(3)) + methodName.substring(4);
-        } else if (methodName.startsWith("is") && methodName.length() > 2) {
-            fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
-        }
-//        if (fieldName != null) {
-//            return resolveColumnNameRecursive(entityClass, fieldName, "");
-//        }
-        return null;
-    }
+////        if (fieldName != null) {
+////            return resolveColumnNameRecursive(entityClass, fieldName, "");
+////        }
+//        return null;
+//    }
 
     private void pushBinaryExpr(Object left, BinaryOperator op, Object right) {
         exprStack.push(new BinaryCondition(left.toString(), op, right));
@@ -1057,7 +847,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         return new LogicalCondition(LogicalOperator.AND, exprs);
     }
 
-    private String getFieldFromMethodName(String owner, String methodName) {
+    /*private String getFieldFromMethodName(String owner, String methodName) {
 //        if (!owner.replace("/", ".").equals(entityClass.getName())) return null;
 
         String fieldName = null;
@@ -1067,7 +857,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
 
         return fieldName != null ? resolveColumnNameRecursive(entityClasses.get(0), fieldName, "") : null;
-    }
+    }*/
 
     private boolean isPrimitiveUnboxingMethod(int opcode, String owner, String name) {
         if(opcode != INVOKEVIRTUAL) return false;

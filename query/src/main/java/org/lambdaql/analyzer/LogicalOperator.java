@@ -1,5 +1,5 @@
 package org.lambdaql.analyzer;
 
-enum LogicalOperator {
+public enum LogicalOperator {
     AND, OR, NOT
 }

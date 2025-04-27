@@ -1,7 +1,6 @@
 package org.lambdaql.query;
 
 import org.lambdaql.analyzer.ConditionExpression;
-import org.lambdaql.analyzer.EntityColumnResolver;
 import org.lambdaql.analyzer.LambdaWhereAnalyzer;
 import org.lambdaql.analyzer.Renderer;
 
@@ -11,7 +10,7 @@ import java.util.List;
 public class SelectQuery<T> {
 
     private final Class<T> entityClass;
-    private final EntityColumnResolver columnResolver;
+    protected final QueryBuilder queryBuilder;
     private ConditionExpression condition;
 
     @FunctionalInterface
@@ -29,51 +28,50 @@ public class SelectQuery<T> {
         R clause(T entity);
     }
 
-    public SelectQuery(Class<T> entityClass, EntityColumnResolver columnResolver) {
+    public static class SelectWhere<T> {
+        public SelectWhere(SelectQuery<T> selectQuery) {
+
+        }
+
+        public SelectWhere<T> and(Where<T> condition) {
+            return this;
+        }
+
+        public SelectWhere<T> or(Where<T> condition) {
+            return this;
+        }
+    }
+
+    public SelectQuery(QueryBuilder queryBuilder, Class<T> entityClass) {
         this.entityClass = entityClass;
-        this.columnResolver = columnResolver;
+        this.queryBuilder = queryBuilder;
     }
 
     public <R> SelectQuery<T> select(Select<T, R> clause) {
         return this;
     }
 
-    public SelectQuery<T> where(Where<T> condition) {
-        this.condition = new LambdaWhereAnalyzer(columnResolver.getEntityManagerFactory().createEntityManager(), List.of(entityClass)).analyze(condition);
+    public SelectWhere<T> where(Where<T> condition) {
+        this.condition = new LambdaWhereAnalyzer(queryBuilder, List.of(entityClass)).analyze(condition);
+        return new SelectWhere<T>(this);
+    }
+
+    public <J> SelectJoinQuery<T, J> join(Class<J> joinEntity, SelectJoinQuery.JoinOn<T, J> onCondition) {
+        return new SelectJoinQuery<T, J>(this, joinEntity,  onCondition);
+    }
+
+    public <J> SelectLeftJoinQuery<T, J> leftJoin(Class<J> joinEntity, SelectLeftJoinQuery.JoinOn<T, J> onCondition) {
+        return new SelectLeftJoinQuery<T, J>(this, joinEntity,  onCondition);
+    }
+
+
+    public SelectQuery<T> limit(int limit) {
         return this;
     }
 
-    public <U> SelectQuery<T> join(Class<U> entityClass, String onCondition) {
+    public SelectQuery<T> offset(int offset) {
         return this;
     }
-
-    public <U> SelectJoinQuery<T, U> leftJoin(Class<U> entityClass, JoinOn<T,U> onCondition) {
-        return new SelectJoinQuery<>();
-    }
-
-    public SelectQuery<T> rightJoin(String table, String onCondition) {
-        return this;
-    }
-
-    public SelectQuery<T> fullJoin(Class<?> entityClass) {
-        return this;
-    }
-
-    public SelectQuery<T> orderBy(String field) {
-        return this;
-    }
-
-    public SelectQuery<T> orderByDesc(String field) {
-        return this;
-    }
-
-//    public SelectQuery<T> limit(int limit) {
-//        return this;
-//    }
-//
-//    public SelectQuery<T> offset(int offset) {
-//        return this;
-//    }
 
     public SelectQuery<T> groupBy(String field) {
         return this;

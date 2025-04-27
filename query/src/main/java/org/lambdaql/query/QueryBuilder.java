@@ -18,8 +18,8 @@ public class QueryBuilder {
         this.columnResolver = new EntityColumnResolver(metamodel, emf);
     }
 
-    public <T> SelectQuery<T> selectFrom(Class<T> entityClass) {
-        return new SelectQuery<>(entityClass, columnResolver);
+    public <T> SelectQuery<T> from(Class<T> entityClass) {
+        return new SelectQuery<>(this, entityClass);
     }
 
 

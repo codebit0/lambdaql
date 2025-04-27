@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
 
-public class SelectJoinQuery<T, J1> {
+public class SelectLeftJoinQuery<T, J1> {
 
     @FunctionalInterface
     public interface Where<T, J> extends Serializable {
@@ -12,12 +12,12 @@ public class SelectJoinQuery<T, J1> {
     }
 
     @FunctionalInterface
-    public interface JoinOn<T, J> extends Serializable {
-        boolean on(T t, J join1);
+    public interface JoinOn<T, J1> extends Serializable {
+        boolean on(T t, J1 join1);
     }
 
 
-    public SelectJoinQuery(SelectQuery<T> baseQuery, Class<J1> joinEntity, JoinOn<T, J1> onCondition) {
+    public SelectLeftJoinQuery(SelectQuery<T> baseQuery, Class<J1> joinClass, JoinOn<T, J1> onCondition) {
         // Constructor logic here
 
     }
@@ -26,7 +26,7 @@ public class SelectJoinQuery<T, J1> {
         return new SelectJoin3Query<>();
     }
 
-    public SelectJoinQuery<T, J1> where(Where<T, J1> condition) {
+    public SelectLeftJoinQuery<T, J1> where(Where<T, J1> condition) {
         return this;
     }
 
