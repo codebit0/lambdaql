@@ -5,7 +5,9 @@ import org.lambdaql.analyzer.LambdaWhereAnalyzer;
 import org.lambdaql.analyzer.Renderer;
 
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class SelectQuery<T> {
 
@@ -28,9 +30,9 @@ public class SelectQuery<T> {
         R clause(T entity);
     }
 
-    public static class SelectWhere<T> {
+    public static class SelectWhere<T> extends SelectQuery<T> {
         public SelectWhere(SelectQuery<T> selectQuery) {
-
+            super(selectQuery.queryBuilder, selectQuery.entityClass);
         }
 
         public SelectWhere<T> and(Where<T> condition) {
@@ -64,6 +66,47 @@ public class SelectQuery<T> {
         return new SelectLeftJoinQuery<T, J>(this, joinEntity,  onCondition);
     }
 
+    public <J> SelectRightJoinQuery<T, J> rightJoin(Class<J> joinEntity, SelectRightJoinQuery.JoinOn<T, J> onCondition) {
+        return new SelectRightJoinQuery<T, J>(this, joinEntity,  onCondition);
+    }
+
+    public <J> SelectCrossJoinQuery<T, J> crossJoin(Class<J> joinEntity, SelectCrossJoinQuery.JoinOn<T, J> onCondition) {
+        return new SelectCrossJoinQuery<T, J>(this, joinEntity,  onCondition);
+    }
+
+    @FunctionalInterface
+    public interface OrderBy<T> extends Serializable {
+        List<Supplier<T>> clause(T entity);
+    }
+
+    @FunctionalInterface
+    public interface Order<T> extends Serializable {
+        List<Supplier<?>> sort(T entity);
+    }
+
+    public interface Order2<T> extends Serializable {
+
+    }
+
+//    @FunctionalInterface
+    public interface Desc<T> extends Order2<T>, Serializable {
+//        List<Order<T>> desc(T entity);
+    }
+
+//    @FunctionalInterface
+    public interface Asc<T> extends Order2<T>, Serializable {
+//        List<Order<T>> asc(T entity);
+    }
+
+//
+//
+//    public SelectQuery<T> orderBy(OrderBy<T> orderBy, OrderBy<T> ... othderOrderBy) {
+//        return this;
+//    }
+
+    public SelectQuery<T> orderBy(Order<T> orderBy) {
+        return this;
+    }
 
     public SelectQuery<T> limit(int limit) {
         return this;
@@ -88,13 +131,7 @@ public class SelectQuery<T> {
     }
 
 
-    public SelectQuery<T> innerJoin(String table, String onCondition) {
-        return this;
-    }
 
-    public SelectQuery<T> outerJoin(String table, String onCondition) {
-        return this;
-    }
 
     public SelectQuery<T> union(SelectQuery<T> other) {
         return this;
@@ -103,7 +140,6 @@ public class SelectQuery<T> {
     public SelectQuery<T> unionAll(SelectQuery<T> other) {
         return this;
     }
-
 
     public SelectQuery<T> intersect(SelectQuery<T> other) {
         return this;

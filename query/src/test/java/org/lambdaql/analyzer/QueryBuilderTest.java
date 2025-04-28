@@ -6,9 +6,7 @@ import org.jinq.jpa.JinqJPAStreamProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.lambdaql.function.JpqlFunction;
-import org.lambdaql.query.QueryBuilder;
-import org.lambdaql.query.SelectJoinQuery;
-import org.lambdaql.query.SelectQuery;
+import org.lambdaql.query.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
@@ -30,6 +28,7 @@ import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.lambdaql.query.SortOrder.DESC;
 
 @SpringBootTest(classes = {QueryBuilderTest.TestContext.class})
 @TestPropertySource(properties = "spring.jta.enabled=false")
@@ -61,7 +60,11 @@ class QueryBuilderTest {
     void selectFromBasic() {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
-        SelectQuery<Order> where0 = query.where(o -> o.getId() == 10);
+
+        query.orderBy(o-> {
+            return List.of(o::getCustomer);
+        });
+        SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getId() == 10);
         assertEquals("SELECT * FROM orders", where0.toString());
     }
 
@@ -144,7 +147,7 @@ class QueryBuilderTest {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
-        SelectQuery<Order> where1 = query.where(o -> o.getId() == nonStaticLambda
+        SelectQuery.SelectWhere<Order> where1 = query.where(o -> o.getId() == nonStaticLambda
                 || o.getId() == param1
                 || o.getId() == param2
                 || o.getTex() == param3
@@ -166,7 +169,7 @@ class QueryBuilderTest {
     void selectFromBasicAnd() {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
-        SelectQuery<Order> where0 = query.where(o -> o.getId() >= 0 && o.getId() <= 1);
+        SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getId() >= 0 && o.getId() <= 1);
         assertEquals("SELECT * FROM orders", where0.toString());
     }
 
@@ -175,7 +178,7 @@ class QueryBuilderTest {
         Date now = new Date();
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
-        SelectQuery<Order> where0 = query.where(o -> o.getId() == 10);
+        SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getId() == 10);
         //assertEquals("SELECT * FROM orders", queryBuilder.getQuery());
     }
 
@@ -189,17 +192,17 @@ class QueryBuilderTest {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
-        SelectQuery<Order> where1 = query.where(o -> o.getId() == param1 || o.getId() == param2 || o.getId() == param3);
-        SelectQuery<Order> where2 = query.where(o -> o.getId() == param1 || (o.getId() < 100 && o.getId() >= param1));
-        SelectQuery<Order> where3 = query.where(o -> o.getId() == order.getId() || (o.getId() < 100 && o.getId() >= param1));
+        SelectQuery.SelectWhere<Order> where1 = query.where(o -> o.getId() == param1 || o.getId() == param2 || o.getId() == param3);
+        SelectQuery.SelectWhere<Order> where2 = query.where(o -> o.getId() == param1 || (o.getId() < 100 && o.getId() >= param1));
+        SelectQuery.SelectWhere<Order> where3 = query.where(o -> o.getId() == order.getId() || (o.getId() < 100 && o.getId() >= param1));
 
 
-        SelectQuery<Order> where4 = query.where(o -> o.getCustomer().getId() == 1);
+        SelectQuery.SelectWhere<Order> where4 = query.where(o -> o.getCustomer().getId() == 1);
         SelectQuery<Order> select = where1.select(o -> o.getProduct().toUpperCase());
 
 
-        SelectJoinQuery<Order, Customer> join = query.leftJoin(Customer.class, (o, c) -> o.getCustomer().getId() == c.getId());
-        join.select((o, c) -> c.getName());
+        SelectLeftJoinQuery<Order, Customer> join = query.leftJoin(Customer.class, (o, c) -> o.getCustomer().getId() == c.getId());
+        //join.select((o, c) -> c.getName());
 
         //assertEquals("SELECT * FROM orders", queryBuilder.getQuery());
     }
@@ -211,7 +214,7 @@ class QueryBuilderTest {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
-        SelectQuery<Order> where1 = query.where(o -> param1 >= 100 && param2 <= 200);
+        SelectQuery.SelectWhere<Order> where1 = query.where(o -> param1 >= 100 && param2 <= 200);
     }
 
     @Test
@@ -220,7 +223,7 @@ class QueryBuilderTest {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
-        SelectQuery<Order> where = query.where(o ->
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
                         !p10
         );
     }
@@ -231,7 +234,7 @@ class QueryBuilderTest {
         boolean enableP1 =true;
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
-        SelectQuery<Order> where = query.where(o ->
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
                 (enableP1? p3 == 250: p3 == 100)
         );
     }
@@ -253,7 +256,7 @@ class QueryBuilderTest {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
-        SelectQuery<Order> where = query.where(o ->
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
                 (
                     (p1 == 70 && p2 != 100) ||    // ==, !=
                                 (p3 > 150 && p4 < 60)         // >, <
