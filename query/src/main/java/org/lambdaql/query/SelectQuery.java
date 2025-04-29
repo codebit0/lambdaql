@@ -5,9 +5,7 @@ import org.lambdaql.analyzer.LambdaWhereAnalyzer;
 import org.lambdaql.analyzer.Renderer;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.util.List;
-import java.util.function.Supplier;
 
 public class SelectQuery<T> {
 
@@ -74,29 +72,36 @@ public class SelectQuery<T> {
         return new SelectCrossJoinQuery<T, J>(this, joinEntity,  onCondition);
     }
 
-    @FunctionalInterface
-    public interface OrderBy<T> extends Serializable {
-        List<Supplier<T>> clause(T entity);
-    }
+//    @FunctionalInterface
+//    public interface OrderBy<T> extends Serializable {
+//        List<Supplier<T>> clause(T entity);
+//    }
 
     @FunctionalInterface
     public interface Order<T> extends Serializable {
-        List<Supplier<?>> sort(T entity);
+        List<Direction> direction(T entity);
     }
 
-    public interface Order2<T> extends Serializable {
 
-    }
-
-//    @FunctionalInterface
-    public interface Desc<T> extends Order2<T>, Serializable {
-//        List<Order<T>> desc(T entity);
-    }
-
-//    @FunctionalInterface
-    public interface Asc<T> extends Order2<T>, Serializable {
-//        List<Order<T>> asc(T entity);
-    }
+//    public interface Direction<T> extends Serializable {
+//        public static void asc(Supplier<?> supplier) {
+//
+//        }
+//
+//        public static void desc(Supplier<?> supplier) {
+//
+//        }
+//    }
+//
+////    @FunctionalInterface
+//    public interface Desc<T> extends Direction<T>, Serializable {
+//
+//    }
+//
+////    @FunctionalInterface
+//    public interface Asc<T> extends Direction<T>, Serializable {
+//
+//    }
 
 //
 //

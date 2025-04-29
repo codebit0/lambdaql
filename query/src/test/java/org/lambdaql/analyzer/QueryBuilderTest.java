@@ -28,7 +28,6 @@ import java.util.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.lambdaql.query.SortOrder.DESC;
 
 @SpringBootTest(classes = {QueryBuilderTest.TestContext.class})
 @TestPropertySource(properties = "spring.jta.enabled=false")
@@ -62,7 +61,9 @@ class QueryBuilderTest {
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
         query.orderBy(o-> {
-            return List.of(o::getCustomer);
+//            return List.of(o::getCustomer, o::getCustomer);
+            List<Direction> asc = List.of(Direction.asc(o::getCustomer));
+            return asc;
         });
         SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getId() == 10);
         assertEquals("SELECT * FROM orders", where0.toString());
