@@ -1,6 +1,8 @@
 package org.lambdaql.analyzer;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 
 /**
@@ -10,15 +12,17 @@ import lombok.experimental.Accessors;
  */
 @Getter
 @Accessors(fluent = true)
+@ToString
+@EqualsAndHashCode(callSuper = false)
 public class BinaryCondition extends ConditionExpression {
-    private final Object field;
+    private final Object left;
     private final BinaryOperator operator;
-    private final Object value;
+    private final Object right;
 
-    public BinaryCondition(Object field, BinaryOperator operator, Object value) {
-        this.field = field;
+    public BinaryCondition(Object left, BinaryOperator operator, Object right) {
+        this.left = left;
         this.operator = operator;
-        this.value = value;
+        this.right = right;
     }
 
     public static BinaryCondition of(Object field, BinaryOperator operator, Object value) {

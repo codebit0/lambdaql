@@ -1,5 +1,6 @@
 package org.lambdaql.analyzer;
 
+import org.lambdaql.analyzer.label.LabelInfo;
 import org.lambdaql.query.QueryBuilder;
 import org.objectweb.asm.*;
 
@@ -19,6 +20,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
     private final Deque<Object> valueStack = new ArrayDeque<>();
     private final Deque<ConditionExpression> exprStack = new ArrayDeque<>();
+    private final Map<Label, LabelInfo> labels = new HashMap<>();
 
 
 //    private static final Set<String> DATE_TYPES = Set.of(
@@ -90,8 +92,8 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitVarInsn(int opcode, int varIndex) {
-        System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex);
-        System.out.println(" >> value "+ findCaptureVarInsn(varIndex));
+        System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex+ " >> valueStack push value "+ findCaptureVarInsn(varIndex));
+
         switch (opcode) {
             case ALOAD, ILOAD, LLOAD, FLOAD, DLOAD -> {
                 valueStack.push(findCaptureVarInsn(varIndex));
@@ -246,15 +248,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitLdcInsn(Object cst) {
-        System.out.println("💾 visitLdcInsn LDC: " + cst);
-//        if (cst instanceof Date date) {
-//            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-//            valueStack.push("'" + sdf.format(date) + "'");
-//        } else if (cst instanceof TemporalAccessor time) {
-//            valueStack.push("'" + time.toString().replace("T", " ") + "'");
-//        } else {
-//            valueStack.push(cst);
-//        }
+        System.out.println("💾 visitLdcInsn LDC: 상수값 저장" + cst);
         valueStack.push(cst);
     }
 
@@ -301,20 +295,20 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             //상수값으로도 쓰이지만 lcmp류의 반환값으로도 사용됨
             case ICONST_0 -> {
                 System.out.println("🧱 ICONST_0 → push 0");
-//                if (stateManager.hasPendingComparison()) {
-//                    stateManager.setExpectedResult(false);
-//                } else {
-//                    valueStack.push(0);
-//                }
+                if(valueStack.peek() instanceof LabelInfo labelInfo) {
+                    labelInfo.value(false);
+                    labels.put(labelInfo.label(), labelInfo);
+                    return;
+                }
                 valueStack.push(0);
             }
             case ICONST_1 -> {
                 System.out.println("🧱 ICONST_1 → push 1");
-//                if (stateManager.hasPendingComparison()) {
-//                    stateManager.setExpectedResult(true);
-//                } else {
-//                    valueStack.push(1);
-//                }
+                if(valueStack.peek() instanceof LabelInfo labelInfo) {
+                    labelInfo.value(true);
+                    labels.put(labelInfo.label(), labelInfo);
+                    return;
+                }
                 valueStack.push(1);
             }
             case ICONST_2, ICONST_3, ICONST_4, ICONST_5 -> {
@@ -345,7 +339,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 BinaryOperator.fromOpcode(opcode);
                 BinaryCondition condition = BinaryCondition.of(left, BinaryOperator.fromOpcode(opcode), right);
                 valueStack.push(condition);
-                //valueStack.push("(" + left + " " + op + " " + right + ")");
             }
 //            case IAND -> {
 //                pushLogicalExpr(LogicalOperator.AND, exprStack.pop(), exprStack.pop());
@@ -360,25 +353,30 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
             case FCMPG, FCMPL  -> {
                 //FCMPG or FCMPL + IFLT
+                Object right = valueStack.pop();
+                Object left = valueStack.pop();
+                Comparison comparison = Comparison.of(left, right);
+                valueStack.push(comparison);
+                System.out.println("🧮 "+OPCODES[opcode]+" → push valueStack Comparison(" + left + ", " + right + ")");
             }
             case DCMPG, DCMPL -> {
                 //DCMPG or DCMPL + IFLT
+                Object right = valueStack.pop();
+                Object left = valueStack.pop();
+                Comparison comparison = Comparison.of(left, right);
+                valueStack.push(comparison);
+                System.out.println("🧮 "+OPCODES[opcode]+" → push valueStack Comparison(" + left + ", " + right + ")");
             }
             case LCMP -> {
                 //long: LCMP + IFLT/IFGT
                 //LCMP는 항상 비교 조건으로 변환되어야 하므로, 조건 분기 없이 쓰이는 LCMP는 분석 대상에서 제외
                 //두 개의 long 값을 비교해서, 결과를 int로 푸시하는 비교 전용 명령어로 같으면 0, 왼쪽이 크면 1, 오른쪽이 크면 -1을 푸시합니다.
-//                if (valueStack.size() < 2) {
-//                    //값비교를 위해서는 항상 2개의 변수가 필요
-//                    System.err.println("❌ LCMP: insufficient operands, stack=" + valueStack);
-//                    return;
-//                }
                 Object right = valueStack.pop();
                 Object left = valueStack.pop();
-                BinaryCondition.of(left, BinaryOperator.NE, right);
+                Comparison comparison = Comparison.of(left, right);
+                valueStack.push(comparison);
                 //값 비교는 0,1,-1 을 반환하므로 IFXX lable 이 따라옴
-//                stateManager.captureComparison(left, right);
-                System.out.println("🧮 LCMP → push ComparisonResult(" + left + ", " + right + ")");
+                System.out.println("🧮 LCMP → push valueStack Comparison(" + left + ", " + right + ")");
             }
 //            case ICONST_0, ICONST_1 -> valueStack.push(opcode == ICONST_1);
             case IRETURN,ARETURN -> {
@@ -409,8 +407,8 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      * 예: IF_ICMPGT → > 연산 해석.
      *
      * @param opcode 명령어의 opcode입니다. 이 opcode는 다음 중 하나일 수 있습니다:
-     *     - IFEQ: 스택의 값이 0인지 비교하여 조건 분기.
-     *     - IFNE: 스택의 값이 0이 아닌지 비교하여 조건 분기.
+     *     - IFEQ: 스택의 값이 0인지 비교하여 조건 분기. IF Equal to Zero
+     *     - IFNE: 스택의 값이 0이 아닌지 비교하여 조건 분기. IF Not Equal to Zero
      *     - IFLT: 스택의 값이 0보다 작은지 비교하여 조건 분기.
      *     - IFGE: 스택의 값이 0보다 크거나 같은지 비교하여 조건 분기.
      *     - IFGT: 스택의 값이 0보다 큰지 비교하여 조건 분기.
@@ -445,31 +443,26 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
                 Object right = valueStack.pop();
                 Object left = valueStack.pop();
-
-                BinaryOperator operator = switch (opcode) {
-                    case IF_ICMPEQ -> BinaryOperator.EQ;
-                    case IF_ICMPNE -> BinaryOperator.NE;
-                    case IF_ICMPLT -> BinaryOperator.LT;
-                    case IF_ICMPLE -> BinaryOperator.LE;
-                    case IF_ICMPGT -> BinaryOperator.GT;
-                    case IF_ICMPGE -> BinaryOperator.GE;
-                    default -> throw new UnsupportedOperationException("Unsupported jump opcode: " + opcode);
-                };
-
-                pushBinaryExpr(left, operator, right);
-                System.out.println("✅ 비교 조건 추가됨: " + left + " " + operator.symbol + " " + right);
+                BinaryOperator operator = BinaryOperator.fromOpcode(opcode);
+                ComparisonBinaryCondition condition = ComparisonBinaryCondition.of(left, operator, right, label, null);
+                valueStack.push(condition);
+                exprStack.push(condition);
+                System.out.println("✅ 비교 조건 추가됨: " + left + " " + operator.symbol() + " " + right);
             }
             case IFEQ, IFNE, IFLT, IFLE, IFGT, IFGE -> {
                 //IFGT > , IFGE >=, IFLT <, IFLE <=, IFNE !=, IFEQ ==
                 System.out.println("🔍 "+ OPCODES[opcode] +" detected: opcode = " + opcode + ", label = "+ label + ", stack = " + valueStack);
-//                if (stateManager.hasPendingComparison()) {
-//                    BinaryOperator op = stateManager.resolveOperatorForOpcode(opcode);
-//                    ComparisonResult cr = stateManager.consumeComparison();
-//                    ConditionExpression expr = new BinaryCondition(cr.left().toString(), op.symbol, cr.right());
-//                    exprStack.push(expr);
-//                    stateManager.registerBranch(opcode, label);
-//                }
-                //stateManager.registerBranch(opcode, label);
+                if(valueStack.peek() instanceof Comparison comparison) {
+                    //cmp 이후 비교 구문이 나오면 long, float, double 비교인 경우이므로 if조건 판별
+                    ////0, 1, -1 가 나옴
+                    BinaryOperator operator = BinaryOperator.fromOpcode(opcode);
+                    Object left = comparison.left();
+                    Object right = comparison.right();
+                    ComparisonBinaryCondition condition = ComparisonBinaryCondition.of(left, operator, right, label, null);
+                    valueStack.push(condition);
+                    exprStack.push(condition);
+                    System.out.println("✅ 비교 조건 추가됨: " + left + " " + operator.symbol() + " " + right);
+                }
             }
             case IF_ACMPEQ, IF_ACMPNE -> {
                 //TODO 참조형 레퍼런스 주소 비교를 id비교로 변경
@@ -513,7 +506,8 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     @Override
     public void visitLabel(Label label) {
         System.out.println("🏷 visitLabel: " + label);
-//        stateManager.setCurrentLabel(label);
+        LabelInfo info = LabelInfo.of(label, null);
+        valueStack.push(info);
         super.visitLabel(label);
     }
 

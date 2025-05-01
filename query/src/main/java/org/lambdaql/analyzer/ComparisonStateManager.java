@@ -10,14 +10,14 @@ import static org.objectweb.asm.Opcodes.*;
 
 @Slf4j
 public class ComparisonStateManager {
-    private ComparisonResult comparison;
+    private Comparison comparison;
     private Label currentLabel;
     private final Set<Label> jumpTargets = new HashSet<>();
     private Integer lastJumpOpcode;
     private Boolean expectedResult;
 
     void captureComparison(Object left, Object right) {
-        this.comparison = new ComparisonResult(left, right);
+        this.comparison = new Comparison(left, right);
         System.out.println(" // captureComparison: " + comparison);
     }
 
@@ -47,8 +47,8 @@ public class ComparisonStateManager {
         return comparison != null;
     }
 
-    ComparisonResult consumeComparison() {
-        ComparisonResult cr = this.comparison;
+    Comparison consumeComparison() {
+        Comparison cr = this.comparison;
         this.comparison = null;
         return cr;
     }

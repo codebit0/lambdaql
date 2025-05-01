@@ -24,6 +24,7 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -130,6 +131,29 @@ class QueryBuilderTest {
     }
 
     @Test
+    void selectOrLongConditions() {
+        long p1 = 70;
+        long p2 = 10;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
+            p1 == 1 + p2 || p1 != 100 || p1 > 2 || p1 >=2 || p1 < 100 || p1<=100
+        );
+    }
+
+    @Test
+    void selectAndLongConditions() {
+        long p1 = 70;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
+                p1 == 1 && p1 != 100 && p1 > 1 && p1 >=1 && p1 < 100 && p1<=100
+        );
+    }
+
+    @Test
     void selectVarIndexTest() {
         long param1 = 70;
         int param2 = 90;
@@ -193,6 +217,7 @@ class QueryBuilderTest {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
+        JpqlFunction.between(1, 2, 3);
         SelectQuery.SelectWhere<Order> where1 = query.where(o -> o.getId() == param1 || o.getId() == param2 || o.getId() == param3);
         SelectQuery.SelectWhere<Order> where2 = query.where(o -> o.getId() == param1 || (o.getId() < 100 && o.getId() >= param1));
         SelectQuery.SelectWhere<Order> where3 = query.where(o -> o.getId() == order.getId() || (o.getId() < 100 && o.getId() >= param1));
@@ -204,7 +229,6 @@ class QueryBuilderTest {
 
         SelectLeftJoinQuery<Order, Customer> join = query.leftJoin(Customer.class, (o, c) -> o.getCustomer().getId() == c.getId());
         //join.select((o, c) -> c.getName());
-
         //assertEquals("SELECT * FROM orders", queryBuilder.getQuery());
     }
 
@@ -258,6 +282,9 @@ class QueryBuilderTest {
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
         SelectQuery.SelectWhere<Order> where = query.where(o ->
+                (
+                        (p1 == 1 || p1 != 100 || p1 > 1 || p1 >=1 || p1 < 100 || p1<=100)         // >, <
+                ) &&
                 (
                     (p1 == 70 && p2 != 100) ||    // ==, !=
                                 (p3 > 150 && p4 < 60)         // >, <

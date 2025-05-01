@@ -4,7 +4,7 @@ public class ConditionExpressionRenderer {
 
     public static String render(ConditionExpression expression) {
         if (expression instanceof BinaryCondition binary) {
-            return "(" + renderOperand(binary.field()) + " " + binary.operator().symbol() + " " + renderOperand(binary.value()) + ")";
+            return "(" + renderOperand(binary.left()) + " " + binary.operator().symbol() + " " + renderOperand(binary.right()) + ")";
         } else if (expression instanceof LogicalCondition logical) {
             StringBuilder sb = new StringBuilder();
             String op = " " + logical.operator().name() + " ";
