@@ -16,7 +16,7 @@ import lombok.experimental.Accessors;
 @EqualsAndHashCode(callSuper = false)
 public class BinaryCondition extends ConditionExpression {
     private final Object left;
-    private final BinaryOperator operator;
+    protected BinaryOperator operator;
     private final Object right;
 
     public BinaryCondition(Object left, BinaryOperator operator, Object right) {

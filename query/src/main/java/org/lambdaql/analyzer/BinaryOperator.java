@@ -94,5 +94,9 @@ public enum BinaryOperator {
             default -> throw new UnsupportedOperationException(this.toString());
         };
     }
+
+    public String toString() {
+        return name()+"("+symbol+")";
+    }
 }
 

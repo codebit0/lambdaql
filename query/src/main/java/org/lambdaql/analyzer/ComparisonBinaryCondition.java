@@ -1,7 +1,9 @@
 package org.lambdaql.analyzer;
 
 import lombok.Getter;
+import lombok.ToString;
 import lombok.experimental.Accessors;
+import org.lambdaql.analyzer.label.LabelInfo;
 
 /**
  * 두 개의 인자를 가지는 연산
@@ -10,22 +12,22 @@ import lombok.experimental.Accessors;
  */
 @Getter
 @Accessors(fluent = true)
+@ToString
 public class ComparisonBinaryCondition extends BinaryCondition {
 
-    private final Object tureValue;
-    private final Object falseValue;
+    private final LabelInfo labelInfo;
 
-    public static ComparisonBinaryCondition of(Object field, BinaryOperator operator, Object value, Object tureExpression, Object falseExpression) {
-        return new ComparisonBinaryCondition(field, operator, value, tureExpression, falseExpression);
+    public static ComparisonBinaryCondition of(Object field, BinaryOperator operator, Object value, LabelInfo labelInfo) {
+        return new ComparisonBinaryCondition(field, operator, value, labelInfo);
     }
 
-    public ComparisonBinaryCondition(Object field, BinaryOperator operator, Object value, Object tureExpression, Object falseExpression) {
+    public ComparisonBinaryCondition(Object field, BinaryOperator operator, Object value, LabelInfo labelInfo) {
         super(field, operator, value);
-        this.tureValue = tureExpression;
-        this.falseValue = falseExpression;
+        this.labelInfo = labelInfo;
     }
 
-    public ComparisonBinaryCondition not() {
-        return new ComparisonBinaryCondition(left(), operator().not(), right(), falseValue, tureValue);
+    public ComparisonBinaryCondition reverseOperator() {
+        this.operator = this.operator.not();
+        return this;
     }
 }

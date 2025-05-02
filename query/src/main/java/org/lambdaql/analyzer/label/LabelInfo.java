@@ -1,18 +1,22 @@
 package org.lambdaql.analyzer.label;
 
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 import org.objectweb.asm.Label;
 
 @Getter
 @Accessors(fluent = true)
+@ToString
+@EqualsAndHashCode(of = "label")
 public class LabelInfo {
-    private Label label;
+    private final Label label;
 
     @Setter
-    private Object value;
+    private Object value = null;
 
     public static LabelInfo of(Label label, Object value) {
         return new LabelInfo(label, value);
