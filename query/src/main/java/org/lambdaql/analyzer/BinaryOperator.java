@@ -6,8 +6,8 @@ import lombok.experimental.Accessors;
 import static org.objectweb.asm.Opcodes.*;
 
 public enum BinaryOperator {
-    EQ("=", IFEQ, IF_ACMPEQ), NE("<>", IFNE, IF_ACMPNE), LT("<", IFLT),
-    LE("<=", IFLE), GT(">", IFGT), GE(">=", IFGE),
+    EQ("=", IF_ICMPEQ, IF_ACMPEQ), NE("<>", IF_ICMPNE, IF_ACMPNE),
+    LT("<", IFLT), LE("<=", IFLE), GT(">", IFGT), GE(">=", IFGE),
     IS("IS", IF_ACMPEQ), IS_NOT("IS NOT", IF_ACMPNE),
     IN("IN", IF_ACMPEQ), NOT_IN("NOT IN", IF_ACMPNE),
     LIKE("LIKE", IF_ACMPEQ), NOT_LIKE("NOT LIKE", IF_ACMPNE),

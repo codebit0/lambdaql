@@ -17,8 +17,8 @@ public class ComparisonBinaryCondition extends BinaryCondition {
 
     private final LabelInfo labelInfo;
 
-    public static ComparisonBinaryCondition of(Object field, BinaryOperator operator, Object value, LabelInfo labelInfo) {
-        return new ComparisonBinaryCondition(field, operator, value, labelInfo);
+    public static ComparisonBinaryCondition of(Object left, BinaryOperator operator, Object right, LabelInfo labelInfo) {
+        return new ComparisonBinaryCondition(left, operator, right, labelInfo);
     }
 
     public ComparisonBinaryCondition(Object field, BinaryOperator operator, Object value, LabelInfo labelInfo) {

@@ -154,6 +154,62 @@ class QueryBuilderTest {
     }
 
     @Test
+    void selectUnBracketsConditions() {
+        boolean p0 = true;
+        boolean p1 = false;
+        boolean p2 = false;
+        boolean p3 = true;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
+                p0 && p1 || p0 || p2 && p3
+        );
+    }
+
+    @Test
+    void selectBracketsConditions() {
+        boolean p0 = true;
+        boolean p1 = false;
+        boolean p2 = false;
+        boolean p3 = true;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
+                p0 && (p1 || p0 || p2) && p3
+        );
+    }
+
+    @Test
+    void selectBrackets2Conditions() {
+        boolean p0 = true;
+        boolean p1 = false;
+        boolean p2 = false;
+        boolean p3 = true;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
+                ((p0 == true && p1 == true && p2 == true) || (p1 == true && p2 == true)) || (p2 == true && p3 == true)
+        );
+    }
+
+    @Test
+    void selectBrackets3Conditions() {
+        boolean p0 = true;
+        boolean p1 = true;
+        boolean p2 = false;
+        boolean p3 = true;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
+                ((p0 == true && p1 == true && p2 == true) || (p1 == true && p2 == true)) && (p2 == true && p3 == true)
+        );
+    }
+
+    @Test
     void selectVarIndexTest() {
         long param1 = 70;
         int param2 = 90;

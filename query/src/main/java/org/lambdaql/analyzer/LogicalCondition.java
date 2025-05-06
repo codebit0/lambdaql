@@ -12,6 +12,7 @@ public class LogicalCondition extends ConditionExpression {
     public final List<ConditionExpression> conditions;
 
     public LogicalCondition(LogicalOperator operator, List<ConditionExpression> conditions) {
+        super();
         this.operator = operator;
         this.conditions = conditions;
     }

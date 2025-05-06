@@ -12,4 +12,8 @@ public record ObjectCapturedVariable(Class<?> type, String typeSignature, Object
     public ObjectCapturedVariable(Class<?> type, Object value, int sequenceIndex, int opcodeIndex) {
         this(type, type.getCanonicalName().replaceAll("\\.", "/"), value, sequenceIndex, opcodeIndex);
     }
+
+    public boolean isBoolean() {
+        return type == boolean.class || type == Boolean.class;
+    }
 }

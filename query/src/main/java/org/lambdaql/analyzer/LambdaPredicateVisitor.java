@@ -300,14 +300,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 if(valueStack.peek() instanceof LabelInfo labelInfo) {
                     //label 다음 ICONST_0는 false를 뜻함
                     labelInfo.value(false);
-
                     valueStack.pop();
-//                    labelNConditions.forEachFlat((label, condition) -> {
-//                        if (label.equals(labelInfo.label()) && condition instanceof ComparisonBinaryCondition comparison) {
-//                            //같은 라벨이 가진 조건을 false로 변경
-//                            System.out.println("   🔄 같은 라벨이 가진 조건을 false로 변경: " + labelInfo.label());
-//                        }
-//                    });
                     return;
                 }
                 valueStack.push(0);
@@ -489,6 +482,18 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     exprStack.add(condition);
 
                     System.out.println("✅ 비교 조건 추가됨: " + left + " " + operator.symbol() + " " + right);
+                } else if(opcode == IFEQ || opcode == IFNE) {
+                    LabelInfo labelInfo = labels.computeIfAbsent(label, k -> LabelInfo.of(label, null));
+                    Object left = valueStack.pop();
+                    if(left instanceof Boolean || (left instanceof ObjectCapturedVariable capturedVariable && capturedVariable.isBoolean())) {
+                        //boolean 타입이 하나만 있는 경우
+                        UnaryOperator operator = UnaryOperator.fromOpcode(opcode);
+                        UnaryCondition condition = UnaryCondition.of(left, operator, labelInfo);
+                        valueStack.push(condition);
+                        exprStack.add(condition);
+                        return;
+                    }
+                    throw new UnsupportedOperationException("Unsupported IFEQ/IFNE condition value: " + left);
                 }
             }
             case IF_ACMPEQ, IF_ACMPNE -> {
@@ -561,14 +566,28 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         exprStack.forEach(expression -> {
             if (expression instanceof ComparisonBinaryCondition comparison) {
                 Object value = comparison.labelInfo().value();
-                if(value instanceof Boolean && !(boolean) value) {
-                   //false인 조건은 operator를 반전시킴
+                if (value instanceof Boolean b && !b || value == null) {
+                    //false인 조건은 operator를 반전시킴
                     comparison.reverseOperator();
                     //라벨이 false 이면 and 조건으로 다음과 결합
                     //라벨이 true이면 or 조건으로 다음과 결합
-               }
+                } else {
+                    System.out.println("   🔄 라벨이 값이 boolean 이 아닌 조건: " + comparison.labelInfo().label());
+                }
+            } else if (expression instanceof UnaryCondition unary) {
+                Object value = unary.labelInfo().value();
+                if (value instanceof Boolean b && !b || value == null) {
+                    //false인 조건은 operator를 반전시킴
+                    unary.reverseOperator();
+                    //라벨이 false 이면 and 조건으로 다음과 결합
+                    //라벨이 true이면 or 조건으로 다음과 결합
+                }
             }
         });
+        //TODO label 의 값이 false 이거나 null 이면 operation은 반전 false  and 조건으로 결합
+        //TODO label 의 값이 true 이면 or 조건으로 결합
+        //TODO label 의 값이 null 이면 ( 를 열고  라벨의 값이 true나 false가 나올때 까지 보류, 값이 나오면 해당 값의 false 이면 반대로 or 조건으로 결합됨
+        //TODO 이때 첫번째 ( 를 연 라벨과 같은 라벨 아이디와 다음 라벨 아이디까지가 종료대상이 됨(? 아직 검증 안함)
         System.out.println("exprStack: " + exprStack);
         return null;
        /* List<ConditionExpression> all = new ArrayList<>(exprStack);
