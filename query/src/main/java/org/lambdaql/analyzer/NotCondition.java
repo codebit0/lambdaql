@@ -8,6 +8,6 @@ import lombok.RequiredArgsConstructor;
  */
 @Getter
 @RequiredArgsConstructor
-public class NotCondition extends ConditionExpression {
+public class NotCondition implements ConditionExpression {
     private final ConditionExpression inner;
 }

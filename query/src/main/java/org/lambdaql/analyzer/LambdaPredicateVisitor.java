@@ -312,12 +312,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     labelInfo.value(true);
 
                     valueStack.pop();
-//                    labelNConditions.forEachFlat((label, condition) -> {
-//                        if (label.equals(labelInfo.label())) {
-//                            //같은 라벨이 가진 조건을 true로 변경
-//                            System.out.println("   🔄 같은 라벨이 가진 조건을 true로 변경: " + labelInfo.label());
-//                        }
-//                    });
                     return;
                 }
                 valueStack.push(1);
@@ -563,27 +557,71 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     public ConditionExpression getConditionExpr() {
         if (exprStack.isEmpty())
             return null;
-        exprStack.forEach(expression -> {
+        List<ConditionExpression> results = new ArrayList<>(exprStack.size());
+        Label currentLabel = null;
+        for (ConditionExpression expression : exprStack) {
+            if (expression instanceof ComparisonBinaryCondition comparison) {
+                Object labelValue = comparison.labelInfo().value();
+                Label label = comparison.labelInfo().label();
+                if (labelValue == null && currentLabel == null) {
+                    results.add(RoundBracketCondition.OPEN);
+                    results.add(comparison);
+                    currentLabel = label;
+                } else if(labelValue == null && (currentLabel != null && currentLabel != label)) {
+                    results.add(comparison);
+                    results.add(RoundBracketCondition.CLOSE);
+                    currentLabel = label;
+                } else if (labelValue != null && currentLabel != null) {
+                    results.add(comparison);
+                    results.add(RoundBracketCondition.CLOSE);
+                    currentLabel = null;
+                }  else if(labelValue != null) {
+                    results.add(comparison);
+                    currentLabel = null;
+                }
+
+            } else if (expression instanceof UnaryCondition unary) {
+                Object labelValue = unary.labelInfo().value();
+                Label label = unary.labelInfo().label();
+                if (labelValue == null && currentLabel == null) {
+                    results.add(RoundBracketCondition.OPEN);
+                    results.add(unary);
+                    currentLabel = label;
+                } else if(labelValue == null && (currentLabel != null && currentLabel != label)) {
+                    results.add(unary);
+                    results.add(RoundBracketCondition.CLOSE);
+                    currentLabel = label;
+                } else if (labelValue != null && currentLabel != null) {
+                    results.add(unary);
+                    results.add(RoundBracketCondition.CLOSE);
+                    currentLabel = null;
+                }  else if(labelValue != null) {
+                    results.add(unary);
+                    currentLabel = null;
+                }
+            }
+        }
+        for (ConditionExpression expression : exprStack) {
             if (expression instanceof ComparisonBinaryCondition comparison) {
                 Object value = comparison.labelInfo().value();
-                if (value instanceof Boolean b && !b || value == null) {
+                if (value instanceof Boolean b && !b) {
                     //false인 조건은 operator를 반전시킴
                     comparison.reverseOperator();
                     //라벨이 false 이면 and 조건으로 다음과 결합
                     //라벨이 true이면 or 조건으로 다음과 결합
-                } else {
+                } else if (value == null) {
                     System.out.println("   🔄 라벨이 값이 boolean 이 아닌 조건: " + comparison.labelInfo().label());
                 }
             } else if (expression instanceof UnaryCondition unary) {
                 Object value = unary.labelInfo().value();
-                if (value instanceof Boolean b && !b || value == null) {
+                if (value instanceof Boolean b && !b) {
                     //false인 조건은 operator를 반전시킴
                     unary.reverseOperator();
                     //라벨이 false 이면 and 조건으로 다음과 결합
                     //라벨이 true이면 or 조건으로 다음과 결합
                 }
             }
-        });
+        }
         //TODO label 의 값이 false 이거나 null 이면 operation은 반전 false  and 조건으로 결합
         //TODO label 의 값이 true 이면 or 조건으로 결합
         //TODO label 의 값이 null 이면 ( 를 열고  라벨의 값이 true나 false가 나올때 까지 보류, 값이 나오면 해당 값의 false 이면 반대로 or 조건으로 결합됨

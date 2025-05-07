@@ -9,10 +9,11 @@ import org.lambdaql.analyzer.label.LabelInfo;
  */
 @Getter
 @Accessors(fluent = true)
-public class UnaryCondition  extends ConditionExpression {
+public class UnaryCondition implements ConditionExpression {
     private final Object value;
-    private UnaryOperator operator;
     private final LabelInfo labelInfo;
+    private final UnaryOperator originalOperator;
+    private UnaryOperator operator;
 
     public static UnaryCondition of(Object value, UnaryOperator operator, LabelInfo labelInfo) {
         return new UnaryCondition(value, operator, labelInfo);
@@ -21,6 +22,7 @@ public class UnaryCondition  extends ConditionExpression {
     public UnaryCondition(Object value, UnaryOperator operator, LabelInfo labelInfo) {
         this.value = value;
         this.operator = operator;
+        this.originalOperator = operator;
         this.labelInfo = labelInfo;
     }
 

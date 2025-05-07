@@ -7,7 +7,7 @@ import java.util.List;
 
 @Getter
 @Accessors(fluent = true)
-public class LogicalCondition extends ConditionExpression {
+public class LogicalCondition implements ConditionExpression {
     public final LogicalOperator operator; // AND / OR
     public final List<ConditionExpression> conditions;
 

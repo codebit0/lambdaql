@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 
 @Getter
 @RequiredArgsConstructor
-public class LiteralCondition extends ConditionExpression {
+public class LiteralCondition implements ConditionExpression {
     private final boolean value;
 
     public static LiteralCondition of(boolean value) {

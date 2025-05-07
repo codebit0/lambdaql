@@ -14,14 +14,16 @@ import lombok.experimental.Accessors;
 @Accessors(fluent = true)
 @ToString
 @EqualsAndHashCode(callSuper = false)
-public class BinaryCondition extends ConditionExpression {
+public class BinaryCondition implements ConditionExpression {
     private final Object left;
-    protected BinaryOperator operator;
     private final Object right;
+    protected BinaryOperator operator;
+    protected final BinaryOperator originOperator;
 
     public BinaryCondition(Object left, BinaryOperator operator, Object right) {
         this.left = left;
         this.operator = operator;
+        this.originOperator = operator;
         this.right = right;
     }
 
