@@ -24,7 +24,7 @@ public class ComparisonStateManager {
     void registerBranch(int opcode, Label label) {
         this.lastJumpOpcode = opcode;
         this.jumpTargets.add(label);
-        System.out.println(" // registerBranch: "+ opcode+ " label " + label);
+        System.out.println(" // registerBranch: "+ opcode+ " labelInfo " + label);
     }
 
     void setCurrentLabel(Label label) {

@@ -6,13 +6,14 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.Accessors;
+import org.lambdaql.analyzer.ConditionExpression;
 import org.objectweb.asm.Label;
 
 @Getter
 @Accessors(fluent = true)
 @ToString
-@EqualsAndHashCode(of = "label")
-public class LabelInfo {
+@EqualsAndHashCode(of = "labelInfo")
+public class LabelInfo implements ConditionExpression {
     private final Label label;
 
     @Setter

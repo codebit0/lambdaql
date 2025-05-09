@@ -184,13 +184,13 @@ class QueryBuilderTest {
     @Test
     void selectBrackets2Conditions() {
         /**
-         * 0 = {ComparisonBinaryCondition@10906} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=true, sequenceIndex=0, opcodeIndex=0], right=1, operator=NE(<>), originOperator=NE(<>)), labelInfo=LabelInfo(label=L448432504, value=null))"
-         * 1 = {ComparisonBinaryCondition@10907} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=1, opcodeIndex=1], right=1, operator=NE(<>), originOperator=NE(<>)), labelInfo=LabelInfo(label=L448432504, value=null))"
-         * 2 = {ComparisonBinaryCondition@10908} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=2, opcodeIndex=2], right=1, operator=EQ(=), originOperator=EQ(=)), labelInfo=LabelInfo(label=L1625676573, value=true))"
-         * 3 = {ComparisonBinaryCondition@10909} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=1, opcodeIndex=1], right=1, operator=NE(<>), originOperator=NE(<>)), labelInfo=LabelInfo(label=L524225829, value=null))"
-         * 4 = {ComparisonBinaryCondition@10910} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=2, opcodeIndex=2], right=1, operator=EQ(=), originOperator=EQ(=)), labelInfo=LabelInfo(label=L1625676573, value=true))"
-         * 5 = {ComparisonBinaryCondition@10911} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=2, opcodeIndex=2], right=1, operator=EQ(=), originOperator=NE(<>)), labelInfo=LabelInfo(label=L854246299, value=false))"
-         * 6 = {ComparisonBinaryCondition@10912} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=true, sequenceIndex=3, opcodeIndex=3], right=1, operator=EQ(=), originOperator=NE(<>)), labelInfo=LabelInfo(label=L854246299, value=false))"
+         * 0 = {ComparisonBinaryCondition@10906} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=true, sequenceIndex=0, opcodeIndex=0], right=1, operator=NE(<>), originOperator=NE(<>)), labelInfo=LabelInfo(labelInfo=L448432504, value=null))"
+         * 1 = {ComparisonBinaryCondition@10907} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=1, opcodeIndex=1], right=1, operator=NE(<>), originOperator=NE(<>)), labelInfo=LabelInfo(labelInfo=L448432504, value=null))"
+         * 2 = {ComparisonBinaryCondition@10908} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=2, opcodeIndex=2], right=1, operator=EQ(=), originOperator=EQ(=)), labelInfo=LabelInfo(labelInfo=L1625676573, value=true))"
+         * 3 = {ComparisonBinaryCondition@10909} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=1, opcodeIndex=1], right=1, operator=NE(<>), originOperator=NE(<>)), labelInfo=LabelInfo(labelInfo=L524225829, value=null))"
+         * 4 = {ComparisonBinaryCondition@10910} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=2, opcodeIndex=2], right=1, operator=EQ(=), originOperator=EQ(=)), labelInfo=LabelInfo(labelInfo=L1625676573, value=true))"
+         * 5 = {ComparisonBinaryCondition@10911} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=2, opcodeIndex=2], right=1, operator=EQ(=), originOperator=NE(<>)), labelInfo=LabelInfo(labelInfo=L854246299, value=false))"
+         * 6 = {ComparisonBinaryCondition@10912} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=true, sequenceIndex=3, opcodeIndex=3], right=1, operator=EQ(=), originOperator=NE(<>)), labelInfo=LabelInfo(labelInfo=L854246299, value=false))"
          */
         boolean p0 = true;
         boolean p1 = false;
@@ -206,24 +206,45 @@ class QueryBuilderTest {
 
     @Test
     void selectBrackets3Conditions() {
-        /**
-         * 0 = {ComparisonBinaryCondition@10907} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=true, sequenceIndex=0, opcodeIndex=0], right=1, operator=NE(<>), originOperator=NE(<>)), labelInfo=LabelInfo(label=L1167627805, value=null))"
-         * 1 = {ComparisonBinaryCondition@10908} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=true, sequenceIndex=1, opcodeIndex=1], right=1, operator=NE(<>), originOperator=NE(<>)), labelInfo=LabelInfo(label=L1167627805, value=null))"
-         * 2 = {ComparisonBinaryCondition@10909} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=2, opcodeIndex=2], right=1, operator=EQ(=), originOperator=EQ(=)), labelInfo=LabelInfo(label=L167599568, value=null))"
-         * 3 = {ComparisonBinaryCondition@10910} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=true, sequenceIndex=1, opcodeIndex=1], right=1, operator=EQ(=), originOperator=NE(<>)), labelInfo=LabelInfo(label=L1316719030, value=false))"
-         * 4 = {ComparisonBinaryCondition@10911} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=2, opcodeIndex=2], right=1, operator=EQ(=), originOperator=NE(<>)), labelInfo=LabelInfo(label=L1316719030, value=false))"
-         * 5 = {ComparisonBinaryCondition@10912} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=false, sequenceIndex=2, opcodeIndex=2], right=1, operator=EQ(=), originOperator=NE(<>)), labelInfo=LabelInfo(label=L1316719030, value=false))"
-         * 6 = {ComparisonBinaryCondition@10913} "ComparisonBinaryCondition(super=BinaryCondition(left=ObjectCapturedVariable[type=boolean, typeSignature=boolean, value=true, sequenceIndex=3, opcodeIndex=3], right=1, operator=EQ(=), originOperator=NE(<>)), labelInfo=LabelInfo(label=L1316719030, value=false))"
-         */
+
         boolean p0 = true;
         boolean p1 = true;
         boolean p2 = false;
         boolean p3 = true;
+        boolean p4 = false;
+        boolean p5 = false;
+        boolean p6 = true;
+        boolean p7 = false;
+
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
-        SelectQuery.SelectWhere<Order> where = query.where(o ->
-                ((p0 == true && p1 == true && p2 == true) || (p1 == true && p2 == true)) && (p2 == true && p3 == true)
+        /**
+         0 = {ComparisonBinaryCondition@14165} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L639313883, value=null))"
+         1 = {ComparisonBinaryCondition@14166} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L639313883, value=null))"
+         2 = {ComparisonBinaryCondition@14167} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L1739770043, value=null))"
+         3 = {ComparisonBinaryCondition@14168} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L1739770043, value=null))"
+         4 = {ComparisonBinaryCondition@14169} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L52439501, value=false))"
+         5 = {ComparisonBinaryCondition@14170} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L52439501, value=false))"
+         6 = {ComparisonBinaryCondition@14171} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L52439501, value=false))"
+         7 = {ComparisonBinaryCondition@14172} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L52439501, value=false))"
+         */
+        SelectQuery.SelectWhere<Order> where1 = query.where(o ->
+                (p0 == true && p1 == true && p2 == true || (p3 == true || p4 == true && p7 == true)) && p5 == true && p6 == true
+        );
+
+        /**
+         * 0 = {ComparisonBinaryCondition@14194} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L1874140695, value=null))"
+         * 1 = {ComparisonBinaryCondition@14195} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L1874140695, value=null))"
+         * 2 = {ComparisonBinaryCondition@14196} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L1915567579, value=true))"
+         * 3 = {ComparisonBinaryCondition@14197} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L1914683944, value=null))"
+         * 4 = {ComparisonBinaryCondition@14198} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L632847899, value=false))"
+         * 5 = {ComparisonBinaryCondition@14199} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L632847899, value=false))"
+         * 6 = {ComparisonBinaryCondition@14200} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L632847899, value=false))"
+         * 7 = {ComparisonBinaryCondition@14201} "ComparisonBinaryCondition(labelInfo=LabelInfo(labelInfo=L632847899, value=false))"
+         */
+        SelectQuery.SelectWhere<Order> where2 = query.where(o ->
+                p0 == true && p1 == true && p2 == true || (p3 == true || p4 == true && p7 == true) && p5 == true && p6 == true
         );
     }
 

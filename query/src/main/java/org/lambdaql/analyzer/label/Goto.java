@@ -1,6 +1,13 @@
 package org.lambdaql.analyzer.label;
 
-import org.objectweb.asm.Label;
+import org.lambdaql.analyzer.ConditionExpression;
 
-public record Goto(Label label) {
+public record Goto(LabelInfo labelInfo) implements ConditionExpression {
+    public static Goto of(LabelInfo labelInfo) {
+        return new Goto(labelInfo);
+    }
+
+    public Goto(LabelInfo labelInfo) {
+        this.labelInfo = labelInfo;
+    }
 }

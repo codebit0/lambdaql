@@ -94,6 +94,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitVarInsn(int opcode, int varIndex) {
+        System.out.println("//visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex);
         System.out.println("📦 visitVarInsn: opcode=" + opcode +" name:"+ OPCODES[opcode]+ ", varIndex=" + varIndex+ " >> valueStack push value "+ findCaptureVarInsn(varIndex));
 
         switch (opcode) {
@@ -298,7 +299,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             case ICONST_0 -> {
                 System.out.println("🧱 ICONST_0 → push 0");
                 if(valueStack.peek() instanceof LabelInfo labelInfo) {
-                    //label 다음 ICONST_0는 false를 뜻함
+                    //labelInfo 다음 ICONST_0는 false를 뜻함
                     labelInfo.value(false);
                     valueStack.pop();
                     return;
@@ -385,20 +386,11 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
 //            case ICONST_0, ICONST_1 -> valueStack.push(opcode == ICONST_1);
             case IRETURN,ARETURN -> {
+                if(valueStack.peek() instanceof LabelInfo labelInfo) {
+                    labelInfo.value(opcode);
+                    valueStack.pop();
+                }
 
-//                if (exprStack.isEmpty()) {
-//                    System.err.println("❌ exprStack is empty at return");
-//                    conditionExpr = null;
-//                } else {
-//                    conditionExpr = exprStack.pop();
-//                    System.out.println("✅ 최종 조건 expr 설정됨: " + conditionExpr);
-//                }
-//                if (!blockStack.isEmpty()) {
-//                    conditionExpr = blockStack.pop().toExpressionTree();
-//                } else {
-//                    conditionExpr = buildExpressionTree();
-//                }
-                //return exprStack.pop();
                 System.out.println("🔚 IRETURN,ARETURN: return exprStack pop");
             }
             //case IFNE, IFEQ -> pushLogicalExpr(LogicalOperator.NOT, exprStack.pop());
@@ -436,7 +428,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitJumpInsn(int opcode, Label label) {
-        System.out.println("//visitJumpInsn:" + OPCODES[opcode]+ " label=" + label);
+        System.out.println("//visitJumpInsn:" + OPCODES[opcode]+ " labelInfo=" + label);
         switch (opcode) {
             case IF_ICMPEQ, IF_ICMPNE, IF_ICMPLT, IF_ICMPLE, IF_ICMPGT, IF_ICMPGE -> {
                 //int, boolean, byte, char, short 는 내부적으로 모두 int로 변환되기 때문에
@@ -461,7 +453,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
             case IFEQ, IFNE, IFLT, IFLE, IFGT, IFGE -> {
                 //IFGT > , IFGE >=, IFLT <, IFLE <=, IFNE !=, IFEQ ==
-                System.out.println("🔍 "+ OPCODES[opcode] +" detected: opcode = " + opcode + ", label = "+ label + ", stack = " + valueStack);
+                System.out.println("🔍 "+ OPCODES[opcode] +" detected: opcode = " + opcode + ", labelInfo = "+ label + ", stack = " + valueStack);
                 if(valueStack.peek() instanceof Comparison comparison) {
                     //cmp 이후 비교 구문이 나오면 long, float, double 비교인 경우이므로 if조건 판별
                     ////0, 1, -1 가 나옴
@@ -492,15 +484,18 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
             case IF_ACMPEQ, IF_ACMPNE -> {
                 //TODO 참조형 레퍼런스 주소 비교를 id비교로 변경
-                System.out.println("🔁 " + OPCODES[opcode]+ " label=" + label);
+                System.out.println("🔁 " + OPCODES[opcode]+ " labelInfo=" + label);
             }
             case GOTO -> {
                 //TODO goto 문을 skip할지는 나중에 검토
-                valueStack.push(new Goto(label));
-                System.out.println("🔁 GOTO encountered: jump to label " + label);
+                LabelInfo labelInfo = labels.computeIfAbsent(label, k -> LabelInfo.of(label, null));
+                Goto gotoInfo = new Goto(labelInfo);
+                valueStack.push(gotoInfo);
+                exprStack.add(gotoInfo);
+                System.out.println("🔁 GOTO encountered: jump to labelInfo " + label);
             }
             case IFNONNULL -> {
-                System.out.println("🔁 IFNONNULL encountered: jump to label " + label);
+                System.out.println("🔁 IFNONNULL encountered: jump to labelInfo " + label);
             }
 
             default -> {
@@ -532,11 +527,12 @@ public class LambdaPredicateVisitor extends MethodVisitor {
      */
     @Override
     public void visitLabel(Label label) {
-        System.out.println("🏷 visitLabel: " + label);
+        System.out.println("//visitLabel: " + label);
         LabelInfo info = labels.get(label);
         if (info == null) {
             info = LabelInfo.of(label, null);
         }
+        exprStack.add(info);
         valueStack.push(info);
         super.visitLabel(label);
     }
@@ -554,7 +550,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         super.visitEnd();
     }
 
-    public ConditionExpression getConditionExpr() {
+    public ConditionExpression getConditionExpr2() {
         if (exprStack.isEmpty())
             return null;
         List<ConditionExpression> results = new ArrayList<>(exprStack.size());
@@ -567,10 +563,12 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                     results.add(RoundBracketCondition.OPEN);
                     results.add(comparison);
                     currentLabel = label;
-                } else if(labelValue == null && (currentLabel != null && currentLabel != label)) {
+                } else if(labelValue == null && currentLabel == label) {
                     results.add(comparison);
+                } else if(labelValue == null && currentLabel != label) {
+                    results.add(comparison);
+                    currentLabel = null;
                     results.add(RoundBracketCondition.CLOSE);
-                    currentLabel = label;
                 } else if (labelValue != null && currentLabel != null) {
                     results.add(comparison);
                     results.add(RoundBracketCondition.CLOSE);
@@ -622,9 +620,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 }
             }
         }
-        //TODO label 의 값이 false 이거나 null 이면 operation은 반전 false  and 조건으로 결합
-        //TODO label 의 값이 true 이면 or 조건으로 결합
-        //TODO label 의 값이 null 이면 ( 를 열고  라벨의 값이 true나 false가 나올때 까지 보류, 값이 나오면 해당 값의 false 이면 반대로 or 조건으로 결합됨
+        //TODO labelInfo 의 값이 false 이거나 null 이면 operation은 반전 false  and 조건으로 결합
+        //TODO labelInfo 의 값이 true 이면 or 조건으로 결합
+        //TODO labelInfo 의 값이 null 이면 ( 를 열고  라벨의 값이 true나 false가 나올때 까지 보류, 값이 나오면 해당 값의 false 이면 반대로 or 조건으로 결합됨
         //TODO 이때 첫번째 ( 를 연 라벨과 같은 라벨 아이디와 다음 라벨 아이디까지가 종료대상이 됨(? 아직 검증 안함)
         System.out.println("exprStack: " + exprStack);
         return null;
@@ -641,6 +639,73 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 : new LogicalCondition(operator, all);*/
 //        return conditionExpr;
     }
+
+    public ConditionExpression getConditionExpr() {
+        if (exprStack.isEmpty()) return null;
+
+        Map<Label, List<ConditionExpression>> byLabel = new LinkedHashMap<>();
+        Map<Label, Boolean> labelResult = new HashMap<>();
+
+        for (ConditionExpression expr : exprStack) {
+            LabelInfo labelInfo = expr instanceof ComparisonBinaryCondition c ? c.labelInfo() :
+                    expr instanceof UnaryCondition u ? u.labelInfo() : null;
+            if (labelInfo == null) continue;
+            byLabel.computeIfAbsent(labelInfo.label(), l -> new ArrayList<>()).add(expr);
+            if (labelInfo.value() instanceof Boolean b)
+                labelResult.put(labelInfo.label(), b);
+        }
+
+        List<ConditionExpression> result = new ArrayList<>();
+        List<ConditionExpression> pending = new ArrayList<>();
+        LogicalOperator currentOp = LogicalOperator.AND;
+        Boolean currentLabelValue = null;
+
+        for (Map.Entry<Label, List<ConditionExpression>> entry : byLabel.entrySet()) {
+            Label label = entry.getKey();
+            List<ConditionExpression> group = entry.getValue();
+            Boolean outcome = labelResult.get(label);
+
+            // operator reverse 처리
+            for (ConditionExpression e : group) {
+                if (e instanceof ComparisonBinaryCondition c && Boolean.FALSE.equals(c.labelInfo().value())) {
+                    c.reverseOperator();
+                } else if (e instanceof UnaryCondition u && Boolean.FALSE.equals(u.labelInfo().value())) {
+                    u.reverseOperator();
+                }
+            }
+
+            ConditionExpression combined = group.size() == 1 ? group.get(0) :
+                    new LogicalCondition(LogicalOperator.AND, group);
+
+            if (currentLabelValue == null) {
+                pending.add(combined);
+                currentLabelValue = outcome;
+            } else if (Boolean.FALSE.equals(currentLabelValue)) {
+                // 이전 label이 false → AND
+                pending.add(combined);
+                result.add(new LogicalCondition(LogicalOperator.AND, new ArrayList<>(pending)));
+                pending.clear();
+                currentLabelValue = null;
+            } else if (Boolean.TRUE.equals(currentLabelValue)) {
+                // 이전 label이 true → OR
+                pending.add(combined);
+                result.add(new LogicalCondition(LogicalOperator.OR, new ArrayList<>(pending)));
+                pending.clear();
+                currentLabelValue = null;
+            } else {
+                pending.add(combined); // 여전히 null인 경우 (첫 시작이거나 중간 or 판단 대기)
+            }
+        }
+
+        if (!pending.isEmpty()) {
+            result.add(pending.size() == 1 ? pending.get(0) : new LogicalCondition(currentOp, pending));
+        }
+
+        return result.size() == 1 ? result.get(0) : new LogicalCondition(LogicalOperator.AND, result);
+    }
+
+
+
 
     // unsupport insn
 
