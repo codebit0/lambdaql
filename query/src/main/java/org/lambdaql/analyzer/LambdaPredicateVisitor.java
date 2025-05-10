@@ -2,6 +2,7 @@ package org.lambdaql.analyzer;
 
 import org.lambdaql.analyzer.label.Goto;
 import org.lambdaql.analyzer.label.LabelInfo;
+import org.lambdaql.analyzer.label.Return;
 import org.lambdaql.query.QueryBuilder;
 import org.objectweb.asm.*;
 
@@ -389,6 +390,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 if(valueStack.peek() instanceof LabelInfo labelInfo) {
                     labelInfo.value(opcode);
                     valueStack.pop();
+                    valueStack.push(Return.of(labelInfo));
                 }
 
                 System.out.println("🔚 IRETURN,ARETURN: return exprStack pop");
@@ -478,6 +480,14 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                         valueStack.push(condition);
                         exprStack.add(condition);
                         return;
+                    } else if(left instanceof Number || (left instanceof ObjectCapturedVariable capturedVariable && capturedVariable.isInt())) {
+                        //int, long, float, double 등 숫자형 비교
+                        BinaryOperator operator = BinaryOperator.fromOpcode(opcode);
+                        int right = opcode == IFEQ ? 1 : 0;
+                        ComparisonBinaryCondition condition = ComparisonBinaryCondition.of(left, operator, right, labelInfo);
+                        valueStack.push(condition);
+                        exprStack.add(condition);
+                        return;
                     }
                     throw new UnsupportedOperationException("Unsupported IFEQ/IFNE condition value: " + left);
                 }
@@ -497,7 +507,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             case IFNONNULL -> {
                 System.out.println("🔁 IFNONNULL encountered: jump to labelInfo " + label);
             }
-
             default -> {
                 throw new UnsupportedOperationException("Unsupported jump opcode: " + opcode);
             }
@@ -642,66 +651,54 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
     public ConditionExpression getConditionExpr() {
         if (exprStack.isEmpty()) return null;
+//        List<ConditionExpression> results = new ArrayList<>(exprStack.size());
 
-        Map<Label, List<ConditionExpression>> byLabel = new LinkedHashMap<>();
-        Map<Label, Boolean> labelResult = new HashMap<>();
-
-        for (ConditionExpression expr : exprStack) {
-            LabelInfo labelInfo = expr instanceof ComparisonBinaryCondition c ? c.labelInfo() :
-                    expr instanceof UnaryCondition u ? u.labelInfo() : null;
-            if (labelInfo == null) continue;
-            byLabel.computeIfAbsent(labelInfo.label(), l -> new ArrayList<>()).add(expr);
-            if (labelInfo.value() instanceof Boolean b)
-                labelResult.put(labelInfo.label(), b);
-        }
-
-        List<ConditionExpression> result = new ArrayList<>();
-        List<ConditionExpression> pending = new ArrayList<>();
-        LogicalOperator currentOp = LogicalOperator.AND;
-        Boolean currentLabelValue = null;
-
-        for (Map.Entry<Label, List<ConditionExpression>> entry : byLabel.entrySet()) {
-            Label label = entry.getKey();
-            List<ConditionExpression> group = entry.getValue();
-            Boolean outcome = labelResult.get(label);
-
-            // operator reverse 처리
-            for (ConditionExpression e : group) {
-                if (e instanceof ComparisonBinaryCondition c && Boolean.FALSE.equals(c.labelInfo().value())) {
-                    c.reverseOperator();
-                } else if (e instanceof UnaryCondition u && Boolean.FALSE.equals(u.labelInfo().value())) {
-                    u.reverseOperator();
+        {
+            //value stack의 값을 순환하며 and, or 및 비교 구문 정리
+            LabelInfo currentLabelInfo = null;
+            for(Object expression : valueStack) {
+                if (expression instanceof ComparisonBinaryCondition comparison) {
+                    Object labelValue = comparison.labelInfo().value();
+                    Label label = comparison.labelInfo().label();
+                    if (labelValue != null && labelValue instanceof Boolean b) {
+                        //false인 조건은 operator를 반전시킴
+                        //라벨이 false 이면 and 조건으로 다음과 결합
+                        //라벨이 true이면 or 조건으로 다음과 결합
+                        if(!b) {
+                            comparison.reverseOperator();
+                        }
+                        currentLabelInfo = comparison.labelInfo();
+                    }
+                } else if (expression instanceof LabelInfo labelInfo && labelInfo.value() == null) {
+                    labelInfo.value(currentLabelInfo.value());
                 }
             }
+        }
+        /*for (Iterator<Object> it = valueStack.iterator(); it.hasNext(); ) {
+            Object expression = it.next();
 
-            ConditionExpression combined = group.size() == 1 ? group.get(0) :
-                    new LogicalCondition(LogicalOperator.AND, group);
-
-            if (currentLabelValue == null) {
-                pending.add(combined);
-                currentLabelValue = outcome;
-            } else if (Boolean.FALSE.equals(currentLabelValue)) {
-                // 이전 label이 false → AND
-                pending.add(combined);
-                result.add(new LogicalCondition(LogicalOperator.AND, new ArrayList<>(pending)));
-                pending.clear();
-                currentLabelValue = null;
-            } else if (Boolean.TRUE.equals(currentLabelValue)) {
-                // 이전 label이 true → OR
-                pending.add(combined);
-                result.add(new LogicalCondition(LogicalOperator.OR, new ArrayList<>(pending)));
-                pending.clear();
-                currentLabelValue = null;
-            } else {
-                pending.add(combined); // 여전히 null인 경우 (첫 시작이거나 중간 or 판단 대기)
+            if (expression instanceof ComparisonBinaryCondition comparison) {
+                Object labelValue = comparison.labelInfo().value();
+                Label label = comparison.labelInfo().label();
+                if (labelValue != null && labelValue instanceof Boolean b) {
+                    //false인 조건은 operator를 반전시킴
+                    //라벨이 false 이면 and 조건으로 다음과 결합
+                    //라벨이 true이면 or 조건으로 다음과 결합
+                    if(!b) {
+                        comparison.reverseOperator();
+                    }
+                    currentLabelInfo = comparison.labelInfo();
+                }
+            } else if (expression instanceof LabelInfo labelInfo && labelInfo.value() == null) {
+                labelInfo.value(currentLabelInfo.value());
             }
-        }
+        }*/
+//        for (Iterator<Object> it = valueStack.descendingIterator(); it.hasNext(); ) {
+//
+//        }
 
-        if (!pending.isEmpty()) {
-            result.add(pending.size() == 1 ? pending.get(0) : new LogicalCondition(currentOp, pending));
-        }
 
-        return result.size() == 1 ? result.get(0) : new LogicalCondition(LogicalOperator.AND, result);
+        return null;
     }
 
 
@@ -991,39 +988,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 //        return null;
 //    }
 
-    private void pushBinaryExpr(Object left, BinaryOperator op, Object right) {
-        exprStack.add(new BinaryCondition(left.toString(), op, right));
-    }
 
-    private void pushLogicalExpr(LogicalOperator op, ConditionExpression... exprs) {
-        exprStack.add(new LogicalCondition(op, Arrays.asList(exprs)));
-    }
-
-    private ConditionExpression buildExpressionTree() {
-        if (exprStack.isEmpty()) return null;
-        List<ConditionExpression> exprs = new ArrayList<>();
-        for (ConditionExpression expression : exprStack) {
-            exprs.add(expression);
-        }
-//        while (!exprStack.isEmpty()) {
-//            exprs.add(exprStack.pop());
-//        }
-        Collections.reverse(exprs);
-        if (exprs.size() == 1) return exprs.get(0);
-        return new LogicalCondition(LogicalOperator.AND, exprs);
-    }
-
-    /*private String getFieldFromMethodName(String owner, String methodName) {
-//        if (!owner.replace("/", ".").equals(entityClass.getName())) return null;
-
-        String fieldName = null;
-        if (methodName.startsWith("get") && methodName.length() > 3)
-            fieldName = Character.toLowerCase(methodName.charAt(3)) + methodName.substring(4);
-        else if (methodName.startsWith("is") && methodName.length() > 2)
-            fieldName = Character.toLowerCase(methodName.charAt(2)) + methodName.substring(3);
-
-        return fieldName != null ? resolveColumnNameRecursive(entityClasses.get(0), fieldName, "") : null;
-    }*/
 
     private boolean isPrimitiveUnboxingMethod(int opcode, String owner, String name) {
         if(opcode != INVOKEVIRTUAL) return false;
@@ -1038,15 +1003,5 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             case "java/lang/Character" -> name.equals("charValue");
             default -> false;
         };
-    }
-
-    static class EmbeddedContext {
-        final Class<?> embeddedClass;
-        final String prefix;
-
-        EmbeddedContext(Class<?> embeddedClass, String prefix) {
-            this.embeddedClass = embeddedClass;
-            this.prefix = prefix;
-        }
     }
 }

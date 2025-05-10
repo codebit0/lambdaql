@@ -18,7 +18,9 @@ dependencies {
 	compileOnly('org.mybatis.spring.boot:mybatis-spring-boot-starter:3.0.4') {
 		exclude group: 'org.springframework.boot'
 	}
-
+	//디컴파일러로 분석해보기
+	implementation 'org.benf:cfr:0.152'
+	
 	compileOnly 'org.projectlombok:lombok:1.18.36'
 	annotationProcessor 'org.projectlombok:lombok:1.18.36'
 	testAnnotationProcessor 'org.projectlombok:lombok:1.18.36'

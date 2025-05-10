@@ -25,7 +25,9 @@ public class LambdaWhereAnalyzer {
             Object serialized = method.invoke(whereClause);
 
             if (serialized instanceof SerializedLambda sl) {
-                ClassReader reader = new ClassReader(sl.getImplClass().replace('/', '.'));
+                String className = sl.getImplClass().replace('/', '.');
+                ClassReader reader = new ClassReader(className);
+
                 LambdaMethodVisitor visitor = new LambdaMethodVisitor(queryBuilder, method, sl, entityClass);
                 reader.accept(visitor, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
                 return visitor.getConditionExpr();
@@ -63,6 +65,4 @@ public class LambdaWhereAnalyzer {
         }
         throw new UnsupportedOperationException("Lambda parsing failed");
     }
-
-
 }

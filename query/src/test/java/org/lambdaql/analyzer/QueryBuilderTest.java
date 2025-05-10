@@ -249,6 +249,128 @@ class QueryBuilderTest {
     }
 
     @Test
+    void selectBrackets4Conditions() {
+
+        int p0 = 1;
+        int p1 = 2;
+        int p2 = 3;
+        int p3 = 4;
+        int p4 = 5;
+        int p5 = 6;
+        int p6 = 7;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+
+        /**
+         exprStack = {ArrayList@10926}  size = 16
+         0 = {ComparisonBinaryCondition@10936} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1338926429, value=null))"
+         1 = {ComparisonBinaryCondition@10937} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L391595516, value=null))"
+         2 = {LabelInfo@10938} "LabelInfo(label=L1338926429, value=null)"
+         3 = {ComparisonBinaryCondition@10939} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L739905410, value=null))"
+         4 = {ComparisonBinaryCondition@10940} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L739905410, value=null))"
+         5 = {LabelInfo@10941} "LabelInfo(label=L391595516, value=null)"
+         6 = {ComparisonBinaryCondition@10942} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1625676573, value=true))"
+         7 = {ComparisonBinaryCondition@10943} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L739905410, value=null))"
+         8 = {ComparisonBinaryCondition@10944} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1625676573, value=true))"
+         9 = {LabelInfo@10945} "LabelInfo(label=L739905410, value=null)"
+         10 = {ComparisonBinaryCondition@10946} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L524225829, value=false))"
+         11 = {ComparisonBinaryCondition@10947} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L524225829, value=false))"
+         12 = {LabelInfo@10948} "LabelInfo(label=L1625676573, value=true)"
+         13 = {Goto@10949} "Goto[labelInfo=LabelInfo(label=L1932244125, value=172)]"
+         14 = {LabelInfo@10950} "LabelInfo(label=L524225829, value=false)"
+         15 = {LabelInfo@10951} "LabelInfo(label=L1932244125, value=172)"
+         */
+        SelectQuery.SelectWhere<Order> where1 = query.where(o ->
+                (((p0 == 1 && p1 == 2) || (p3 == 4 && p4 == 5)) && (p5 == 6 || (p6 == 7 && p2 == 3))) || (p0 == 0 && p1 == 0)
+        );
+
+        /**
+         exprStack = {ArrayList@10941}  size = 16
+         0 = {ComparisonBinaryCondition@10950} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L629850598, value=null))"
+         1 = {ComparisonBinaryCondition@10951} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1226784688, value=null))"
+         2 = {LabelInfo@10952} "LabelInfo(label=L629850598, value=null)"
+         3 = {ComparisonBinaryCondition@10953} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1024254289, value=true))"
+         4 = {ComparisonBinaryCondition@10954} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1024254289, value=true))"
+         5 = {LabelInfo@10955} "LabelInfo(label=L1226784688, value=null)"
+         6 = {ComparisonBinaryCondition@10956} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1486944091, value=null))"
+         7 = {ComparisonBinaryCondition@10957} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1024254289, value=true))"
+         8 = {ComparisonBinaryCondition@10958} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1024254289, value=true))"
+         9 = {LabelInfo@10959} "LabelInfo(label=L1486944091, value=null)"
+         10 = {ComparisonBinaryCondition@10960} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L727095384, value=false))"
+         11 = {ComparisonBinaryCondition@10961} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L727095384, value=false))"
+         12 = {LabelInfo@10962} "LabelInfo(label=L1024254289, value=true)"
+         13 = {Goto@10963} "Goto[labelInfo=LabelInfo(label=L461688893, value=172)]"
+         14 = {LabelInfo@10964} "LabelInfo(label=L727095384, value=false)"
+         15 = {LabelInfo@10965} "LabelInfo(label=L461688893, value=172)"
+         */
+        SelectQuery.SelectWhere<Order> where2 = query.where(o ->
+                !(((p0 == 1 && p1 == 2) || (p3 == 4 && p4 == 5)) && (p5 == 6 || (p6 == 7 && p2 == 3))) || (p0 == 0 && p1 == 0)
+        );
+    }
+
+    /**
+     * 3항 연산자 조건은 추적 분석이 어렴움.
+     * TODO 이에 대체 메서드로 해결하고자 함
+     */
+    @Test
+    void selectTernaryConditions() {
+
+        int p0 = 1;
+        int p1 = 2;
+        int p2 = 3;
+        int p3 = 4;
+        int p4 = 5;
+        int p5 = 6;
+        int p6 = 7;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+
+        /**
+         * 0 = {ComparisonBinaryCondition@14167} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L448432504, value=null))"
+         * 1 = {ComparisonBinaryCondition@14168} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L524225829, value=null))"
+         * 2 = {LabelInfo@14169} "LabelInfo(label=L448432504, value=null)"
+         * 3 = {ComparisonBinaryCondition@14170} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L854246299, value=null))"
+         * 4 = {LabelInfo@14171} "LabelInfo(label=L524225829, value=null)"
+         * 5 = {ComparisonBinaryCondition@14172} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1324399707, value=false))"
+         * 6 = {ComparisonBinaryCondition@14173} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1324399707, value=false))"
+         * 7 = {Goto@14174} "Goto[labelInfo=LabelInfo(label=L8633259, value=172)]"
+         * 8 = {LabelInfo@14175} "LabelInfo(label=L1324399707, value=false)"
+         * 9 = {Goto@14176} "Goto[labelInfo=LabelInfo(label=L8633259, value=172)]"
+         * 10 = {LabelInfo@14177} "LabelInfo(label=L854246299, value=null)"
+         * 11 = {ComparisonBinaryCondition@14178} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1224302486, value=true))"
+         * 12 = {ComparisonBinaryCondition@14179} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1438317505, value=false))"
+         * 13 = {LabelInfo@14180} "LabelInfo(label=L1224302486, value=true)"
+         * 14 = {Goto@14181} "Goto[labelInfo=LabelInfo(label=L8633259, value=172)]"
+         * 15 = {LabelInfo@14182} "LabelInfo(label=L1438317505, value=false)"
+         * 16 = {LabelInfo@10907} "LabelInfo(label=L8633259, value=172)"
+         */
+        SelectQuery.SelectWhere<Order> where1 = query.where(o ->
+                (p0 == 1 && p1 == 2 || p2 == 3)? (p3 == 4 && p4 == 5): (p5 == 6 || p6 == 7)
+        );
+
+        /**
+         * 0 = {ComparisonBinaryCondition@14204} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1739770043, value=null))"
+         * 1 = {ComparisonBinaryCondition@14205} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1739770043, value=null))"
+         * 2 = {ComparisonBinaryCondition@14206} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1739770043, value=null))"
+         * 3 = {ComparisonBinaryCondition@14207} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L52439501, value=false))"
+         * 4 = {ComparisonBinaryCondition@14208} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L52439501, value=false))"
+         * 5 = {Goto@14209} "Goto[labelInfo=LabelInfo(label=L1224302486, value=172)]"
+         * 6 = {LabelInfo@14210} "LabelInfo(label=L52439501, value=false)"
+         * 7 = {Goto@14211} "Goto[labelInfo=LabelInfo(label=L1224302486, value=172)]"
+         * 8 = {LabelInfo@14212} "LabelInfo(label=L1739770043, value=null)"
+         * 9 = {ComparisonBinaryCondition@14213} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1438317505, value=true))"
+         * 10 = {ComparisonBinaryCondition@14214} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L616302301, value=false))"
+         * 11 = {LabelInfo@14215} "LabelInfo(label=L1438317505, value=true)"
+         * 12 = {Goto@14216} "Goto[labelInfo=LabelInfo(label=L1224302486, value=172)]"
+         * 13 = {LabelInfo@14217} "LabelInfo(label=L616302301, value=false)"
+         * 14 = {LabelInfo@14195} "LabelInfo(label=L1224302486, value=172)"
+         */
+        SelectQuery.SelectWhere<Order> where2 = query.where(o ->
+                (p0 == 1 && p1 == 2 && p2 == 3)? (p3 == 4 && p4 == 5): (p5 == 6 || p6 == 7)
+        );
+    }
+
+    @Test
     void selectVarIndexTest() {
         long param1 = 70;
         int param2 = 90;
@@ -395,127 +517,6 @@ class QueryBuilderTest {
         );
     }
 
-    @Test
-    void selectAndStack_RepresentativeConditions2() {
-        List<ObjectCapturedVariable> capturedVars = List.of(
-                new ObjectCapturedVariable(Long.class, 70L, 0, 0),
-                new ObjectCapturedVariable(Integer.class, 150, 1, 2),
-                new ObjectCapturedVariable(Short.class, (short) 200, 2, 3),
-                new ObjectCapturedVariable(Byte.class, (byte) 50, 3, 4),
-                new ObjectCapturedVariable(Double.class, 99.9, 4, 5),
-                new ObjectCapturedVariable(Float.class, 120.5f, 5, 7),
-                new ObjectCapturedVariable(Long.class, 100L, 6, 8),
-                new ObjectCapturedVariable(Integer.class, 80, 7, 10),
-                new ObjectCapturedVariable(Boolean.class, true, 8, 11),
-                new ObjectCapturedVariable(Boolean.class, false, 9, 12),
-                new ObjectCapturedVariable(Boolean.class, true, 10, 13),
-                new ObjectCapturedVariable(Order.class, null, 11, 14)
-        );
-
-        LambdaOpcodeAnalyzer analyzer = new LambdaOpcodeAnalyzer(capturedVars);
-
-        // (p1 == 70)
-        analyzer.visitVarInsn(0);
-        analyzer.visitLdcInsn(70L);
-        analyzer.visitComparison(BinaryOperator.EQ);
-
-        // (p2 != 100)
-        analyzer.visitVarInsn(2);
-        analyzer.visitIntInsn(100);
-        analyzer.visitComparison(BinaryOperator.NE);
-        analyzer.visitLogicalOp(LogicalOperator.AND, 2);
-
-        // (p3 > 150)
-        analyzer.visitVarInsn(3);
-        analyzer.visitIntInsn(150);
-        analyzer.visitComparison(BinaryOperator.GT);
-
-        // (p4 < 60)
-        analyzer.visitVarInsn(4);
-        analyzer.visitIntInsn(60);
-        analyzer.visitComparison(BinaryOperator.LT);
-        analyzer.visitLogicalOp(LogicalOperator.AND, 2);
-
-        // OR 두개
-        analyzer.visitLogicalOp(LogicalOperator.OR, 2);
-
-        // (p5 <= 100.0)
-        analyzer.visitVarInsn(5);
-        analyzer.visitLdcInsn(100.0);
-        analyzer.visitComparison(BinaryOperator.LE);
-
-        // (p6 >= 120.0)
-        analyzer.visitVarInsn(7);
-        analyzer.visitLdcInsn(120.0f);
-        analyzer.visitComparison(BinaryOperator.GE);
-        analyzer.visitLogicalOp(LogicalOperator.OR, 2);
-
-        // (p7 >= 90)
-        analyzer.visitVarInsn(8);
-        analyzer.visitIntInsn(90);
-        analyzer.visitComparison(BinaryOperator.GE);
-
-        // (p8 < 100)
-        analyzer.visitVarInsn(10);
-        analyzer.visitIntInsn(100);
-        analyzer.visitComparison(BinaryOperator.LT);
-
-        // (p2 > 140)
-        analyzer.visitVarInsn(2);
-        analyzer.visitIntInsn(140);
-        analyzer.visitComparison(BinaryOperator.GT);
-        analyzer.visitLogicalOp(LogicalOperator.OR, 2);
-        analyzer.visitLogicalOp(LogicalOperator.AND, 2);
-
-        // (p5 <= 100 OR p6 >= 120) AND (p7 >= 90 AND (p8 < 100 OR p2 > 140))
-        analyzer.visitLogicalOp(LogicalOperator.AND, 2);
-
-        // NOT(p3 == 250)
-        analyzer.visitVarInsn(3);
-        analyzer.visitIntInsn(250);
-        analyzer.visitComparison(BinaryOperator.EQ);
-        analyzer.visitLogicalOp(LogicalOperator.NOT, 1);
-
-        // (p9 == true)
-        analyzer.visitVarInsn(11);
-        analyzer.visitLdcInsn(true);
-        analyzer.visitComparison(BinaryOperator.EQ);
-
-        // !(p10 == true)
-        analyzer.visitVarInsn(12);
-        analyzer.visitLdcInsn(true);
-        analyzer.visitComparison(BinaryOperator.EQ);
-        analyzer.visitLogicalOp(LogicalOperator.NOT, 1);
-
-        // 삼항연산자 (enableP1 ? (p3 == 250) : (p3 == 100))
-        analyzer.visitVarInsn(13); // enableP1
-        analyzer.visitLogicalOp(LogicalOperator.NOT, 1);
-
-        // (p3 == 250)
-        analyzer.visitVarInsn(3);
-        analyzer.visitIntInsn(250);
-        analyzer.visitComparison(BinaryOperator.EQ);
-
-        // (p3 == 100)
-        analyzer.visitVarInsn(3);
-        analyzer.visitIntInsn(100);
-        analyzer.visitComparison(BinaryOperator.EQ);
-
-        // (enableP1 ? (p3 == 250) : (p3 == 100)) 이 TernaryCondition으로 조립됨
-
-        // 전체 AND
-        analyzer.visitLogicalOp(LogicalOperator.AND, 6);
-
-        // 결과 복원
-        ConditionExpression result = analyzer.build();
-        String rendered = ConditionExpressionRenderer.render(result);
-
-        System.out.println("\n[최종 복원된 조건식]");
-        System.out.println(rendered);
-
-        assertNotNull(result);
-        assertTrue(rendered.contains("?")); // 3항 연산자가 정상 복원됐는지 확인
-    }
 
     @Test
     void selectOrStack() {

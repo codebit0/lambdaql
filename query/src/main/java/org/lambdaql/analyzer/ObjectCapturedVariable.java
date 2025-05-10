@@ -1,5 +1,7 @@
 package org.lambdaql.analyzer;
 
+import org.lambdaql.utils.PrimitiveHelper;
+
 /**
  * Represents a captured variable in a lambda expression.
  * @param type the type of the captured variable
@@ -14,6 +16,10 @@ public record ObjectCapturedVariable(Class<?> type, String typeSignature, Object
     }
 
     public boolean isBoolean() {
-        return type == boolean.class || type == Boolean.class;
+        return PrimitiveHelper.isBoolean(type);
+    }
+
+    public boolean isInt() {
+        return PrimitiveHelper.isInt(type);
     }
 }

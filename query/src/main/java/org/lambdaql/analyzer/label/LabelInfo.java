@@ -12,7 +12,7 @@ import org.objectweb.asm.Label;
 @Getter
 @Accessors(fluent = true)
 @ToString
-@EqualsAndHashCode(of = "labelInfo")
+@EqualsAndHashCode(of = "label")
 public class LabelInfo implements ConditionExpression {
     private final Label label;
 

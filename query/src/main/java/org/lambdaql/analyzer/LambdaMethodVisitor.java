@@ -49,7 +49,7 @@ public class LambdaMethodVisitor extends ClassVisitor {
                         System.out.println(a);
                     }
             );
-
+            */
             System.out.println("serializedLambda getCapturingClass: "+serializedLambda.getCapturingClass());
             System.out.println("serializedLambda getFunctionalInterfaceClass: "+serializedLambda.getFunctionalInterfaceClass());
             System.out.println("serializedLambda getFunctionalInterfaceMethodName: "+serializedLambda.getFunctionalInterfaceMethodName());
@@ -57,7 +57,7 @@ public class LambdaMethodVisitor extends ClassVisitor {
             System.out.println("serializedLambda getImplClass: "+serializedLambda.getImplClass());
             System.out.println("serializedLambda getImplMethodName: "+serializedLambda.getImplMethodName());
             System.out.println("serializedLambda getImplMethodSignature: "+serializedLambda.getImplMethodSignature());
-            System.out.println("serializedLambda getInstantiatedMethodType: "+serializedLambda.getInstantiatedMethodType());*/
+            System.out.println("serializedLambda getInstantiatedMethodType: "+serializedLambda.getInstantiatedMethodType());
 
             Field[] declaredFields = this.method.getDeclaringClass().getDeclaredFields();
             LambdaVariableAnalyzer lambdaVariable = new LambdaVariableAnalyzer(this.method, serializedLambda, entityClasses, access);
