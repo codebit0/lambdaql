@@ -674,6 +674,11 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 }
             }
         }
+        //소괄호 처리
+
+        //1. valueStack의 역순으로 탐색
+        //2. LabelInfo가 null인 경우 그 이전 라벨까지 labelinfo 에 저장
+        //3.  2항에서 넣은 ComparisonBinaryCondition 객체에 라벨이 null 이 남아 있는 경우 해당 ComparisonBinaryCondition 항과 LabelInfo 까지릃 한번 더 감싸줌
         /*for (Iterator<Object> it = valueStack.iterator(); it.hasNext(); ) {
             Object expression = it.next();
 

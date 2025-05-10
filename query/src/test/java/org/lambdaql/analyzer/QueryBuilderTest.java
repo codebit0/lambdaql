@@ -280,6 +280,7 @@ class QueryBuilderTest {
          14 = {LabelInfo@10950} "LabelInfo(label=L524225829, value=false)"
          15 = {LabelInfo@10951} "LabelInfo(label=L1932244125, value=172)"
          */
+        //query.where((o) -> (p0 == 1 && p1 == 2 || p3 == 4 && p4 == 5) && (p5 == 6 || p6 == 7 && p2 == 3) || p0 == 0 && p1 == 0);
         SelectQuery.SelectWhere<Order> where1 = query.where(o ->
                 (((p0 == 1 && p1 == 2) || (p3 == 4 && p4 == 5)) && (p5 == 6 || (p6 == 7 && p2 == 3))) || (p0 == 0 && p1 == 0)
         );
@@ -303,6 +304,7 @@ class QueryBuilderTest {
          14 = {LabelInfo@10964} "LabelInfo(label=L727095384, value=false)"
          15 = {LabelInfo@10965} "LabelInfo(label=L461688893, value=172)"
          */
+        //query.where((o) -> (p0 != 1 || p1 != 2) && (p3 != 4 || p4 != 5) || p5 != 6 && (p6 != 7 || p2 != 3) || p0 == 0 && p1 == 0);
         SelectQuery.SelectWhere<Order> where2 = query.where(o ->
                 !(((p0 == 1 && p1 == 2) || (p3 == 4 && p4 == 5)) && (p5 == 6 || (p6 == 7 && p2 == 3))) || (p0 == 0 && p1 == 0)
         );
