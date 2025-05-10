@@ -479,6 +479,11 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                         UnaryCondition condition = UnaryCondition.of(left, operator, labelInfo);
                         valueStack.push(condition);
                         exprStack.add(condition);
+//                        BinaryOperator operator = BinaryOperator.fromOpcode(opcode);
+//                        boolean right = opcode == IFEQ ? false : false;
+//                        ComparisonBinaryCondition condition = ComparisonBinaryCondition.of(left, operator, right, labelInfo);
+//                        valueStack.push(condition);
+//                        exprStack.add(condition);
                         return;
                     } else if(left instanceof Number || (left instanceof ObjectCapturedVariable capturedVariable && capturedVariable.isInt())) {
                         //int, long, float, double 등 숫자형 비교
