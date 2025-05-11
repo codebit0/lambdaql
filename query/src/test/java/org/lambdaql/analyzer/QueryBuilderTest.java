@@ -262,23 +262,26 @@ class QueryBuilderTest {
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
         /**
-         exprStack = {ArrayList@10926}  size = 16
-         0 = {ComparisonBinaryCondition@10936} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1338926429, value=null))"
-         1 = {ComparisonBinaryCondition@10937} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L391595516, value=null))"
-         2 = {LabelInfo@10938} "LabelInfo(label=L1338926429, value=null)"
-         3 = {ComparisonBinaryCondition@10939} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L739905410, value=null))"
-         4 = {ComparisonBinaryCondition@10940} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L739905410, value=null))"
-         5 = {LabelInfo@10941} "LabelInfo(label=L391595516, value=null)"
-         6 = {ComparisonBinaryCondition@10942} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1625676573, value=true))"
-         7 = {ComparisonBinaryCondition@10943} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L739905410, value=null))"
-         8 = {ComparisonBinaryCondition@10944} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1625676573, value=true))"
-         9 = {LabelInfo@10945} "LabelInfo(label=L739905410, value=null)"
-         10 = {ComparisonBinaryCondition@10946} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L524225829, value=false))"
-         11 = {ComparisonBinaryCondition@10947} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L524225829, value=false))"
-         12 = {LabelInfo@10948} "LabelInfo(label=L1625676573, value=true)"
-         13 = {Goto@10949} "Goto[labelInfo=LabelInfo(label=L1932244125, value=172)]"
-         14 = {LabelInfo@10950} "LabelInfo(label=L524225829, value=false)"
-         15 = {LabelInfo@10951} "LabelInfo(label=L1932244125, value=172)"
+         exprStack = {ArrayList@10927}  size = 19
+         0 = {ComparisonBinaryCondition@10937} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1625676573, value=null), logicalOperator=OR)"
+         1 = {ComparisonBinaryCondition@10938} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L616302301, value=null), logicalOperator=OR)"
+         2 = {LabelInfo@10939} "LabelInfo(label=L1625676573, value=null)"
+         3 = {ComparisonBinaryCondition@10940} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L651177414, value=null), logicalOperator=OR)"
+         4 = {ComparisonBinaryCondition@10941} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L651177414, value=null), logicalOperator=OR)"
+         5 = {LabelInfo@10942} "LabelInfo(label=L616302301, value=null)"
+         6 = {ComparisonBinaryCondition@10943} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L618120037, value=true), logicalOperator=OR)"
+         7 = {ComparisonBinaryCondition@10944} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L651177414, value=null), logicalOperator=OR)"
+         8 = {ComparisonBinaryCondition@10945} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L618120037, value=true), logicalOperator=OR)"
+         9 = {LabelInfo@10946} "LabelInfo(label=L651177414, value=null)"
+         10 = {ComparisonBinaryCondition@10947} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L649154765, value=null), logicalOperator=OR)"
+         11 = {ComparisonBinaryCondition@10948} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L618120037, value=true), logicalOperator=OR)"
+         12 = {LabelInfo@10949} "LabelInfo(label=L649154765, value=null)"
+         13 = {ComparisonBinaryCondition@10950} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1648003357, value=false), logicalOperator=OR)"
+         14 = {ComparisonBinaryCondition@10951} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1648003357, value=false), logicalOperator=OR)"
+         15 = {LabelInfo@10952} "LabelInfo(label=L618120037, value=true)"
+         16 = {Goto@10953} "Goto[labelInfo=LabelInfo(label=L2036507492, value=172)]"
+         17 = {LabelInfo@10954} "LabelInfo(label=L1648003357, value=false)"
+         18 = {LabelInfo@10955} "LabelInfo(label=L2036507492, value=172)"
          */
         //query.where((o) -> (p0 == 1 && p1 == 2 || p3 == 4 && p4 == 5) && (p5 == 6 || p6 == 7 && p2 == 3) || p0 == 0 && p1 == 0);
         SelectQuery.SelectWhere<Order> where1 = query.where(o ->

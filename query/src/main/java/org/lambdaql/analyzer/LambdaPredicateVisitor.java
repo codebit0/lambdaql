@@ -3,6 +3,10 @@ package org.lambdaql.analyzer;
 import org.lambdaql.analyzer.label.Goto;
 import org.lambdaql.analyzer.label.LabelInfo;
 import org.lambdaql.analyzer.label.Return;
+import org.lambdaql.analyzer.node.ConditionGroupNode;
+import org.lambdaql.analyzer.node.ConditionLeafNode;
+import org.lambdaql.analyzer.node.ConditionNode;
+import org.lambdaql.analyzer.node.ConditionTreeBuilder;
 import org.lambdaql.query.QueryBuilder;
 import org.objectweb.asm.*;
 
@@ -654,9 +658,57 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 //        return conditionExpr;
     }
 
+
+
+
+    public ConditionGroupNode buildFlatGroups(List<ConditionExpression> exprStack) {
+        List<ConditionNode> groups = new ArrayList<>();
+        List<ConditionLeafNode> buffer = new ArrayList<>();
+
+        for (Object item : exprStack) {
+            if (item instanceof ComparisonBinaryCondition cmp) {
+                LabelInfo labelInfo = cmp.labelInfo(); // 추출 필요
+                ConditionLeafNode leaf = new ConditionLeafNode(cmp, labelInfo);
+                buffer.add(leaf);
+            } else if (item instanceof LabelInfo labelInfo) {
+                if(buffer.size() <= 0) {
+                    // 버퍼에 아무것도 없으면 무시
+                    continue;
+                } else if(buffer.size() == 1) {
+                    // 버퍼에 하나만 있으면 그룹을 만들지 않고 그냥 추가
+                    ConditionLeafNode leaf = buffer.get(0);
+                    groups.add(leaf);
+                    buffer.clear();
+                } else if(buffer.size() > 1) {
+                    // 버퍼에 여러개가 있으면 그룹을 만들어서 추가
+                    // 그룹을 종료할 타이밍
+                    ConditionGroupNode group = new ConditionGroupNode();
+                    group.setLabelInfo(labelInfo); // 그룹의 기준 라벨 설정
+                    for (ConditionLeafNode leaf : buffer) {
+                        group.addChild(leaf);
+                    }
+                    groups.add(group);
+                    buffer.clear();
+                }
+            }
+        }
+
+        ConditionGroupNode root = new ConditionGroupNode();
+        for (ConditionNode group : groups) {
+            root.addChild(group);
+        }
+        return root;
+    }
+
+
+
     public ConditionExpression getConditionExpr() {
         if (exprStack.isEmpty()) return null;
 //        List<ConditionExpression> results = new ArrayList<>(exprStack.size());
+
+        ConditionGroupNode root = buildFlatGroups(exprStack); // 너가 이미 만든 1차 결과
+//        ConditionTreeBuilder builder = new ConditionTreeBuilder();
+//        List<ConditionGroupNode> nestedTree = builder.buildNestedTree(flatGroups);
 
         {
             //value stack의 값을 순환하며 and, or 및 비교 구문 정리
