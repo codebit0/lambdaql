@@ -19,7 +19,7 @@ public class ConditionTreeBuilder {
 
             LabelInfo info = leaf.getLabelInfo();
             if (info != null && info.value() == null) {
-                ConditionGroupNode group = leaf.getParentGroup();
+                ConditionGroupNode group = leaf.getGroup();
                 if (group.getLabelInfo() == info) {
                     //자신의 그룹에서 그룹핑이 된 경우
                     //FIXME 다만 자신의 그룹에서 첫번째인 경우는 제외

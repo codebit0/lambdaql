@@ -15,17 +15,17 @@ public final class ConditionLeafNode implements ConditionNode {
     private ConditionLeafNode nextLeaf;
 
     @Setter
-    private ConditionGroupNode parentGroup;
+    private ConditionGroupNode group;
 
     public ConditionLeafNode(ConditionExpression condition, LabelInfo labelInfo) {
         this.condition = condition;
         this.labelInfo = labelInfo;
     }
 
-    public List<ConditionNode> getSiblings() {
+    public List<ConditionNode> siblings() {
         List<ConditionNode> siblings = new ArrayList<>();
 
-        for (ConditionNode node : parentGroup.getChildren()) {
+        for (ConditionNode node : group.getChildren()) {
             if (node != this) {
                 siblings.add(node);
             }

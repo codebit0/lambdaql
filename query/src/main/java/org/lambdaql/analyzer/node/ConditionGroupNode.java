@@ -29,7 +29,7 @@ public final class ConditionGroupNode implements ConditionNode {
     public void addChild(ConditionNode node) {
         children.add(node);
         if (node instanceof ConditionLeafNode leaf) {
-            leaf.setParentGroup(this); // ⬅ 연결
+            leaf.setGroup(this); // ⬅ 연결
             connectLeaf(leaf);         // 기존 B+Leaf 연결
         } else if (node instanceof ConditionGroupNode group) {
             group.setParent(this);
