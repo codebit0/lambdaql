@@ -665,25 +665,28 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         List<ConditionNode> groups = new ArrayList<>();
         List<ConditionLeafNode> buffer = new ArrayList<>();
 
+        LabelInfo returnLabel = null;
         for (Object item : exprStack) {
             if (item instanceof ComparisonBinaryCondition cmp) {
                 LabelInfo labelInfo = cmp.labelInfo(); // 추출 필요
                 ConditionLeafNode leaf = new ConditionLeafNode(cmp, labelInfo);
                 buffer.add(leaf);
             } else if (item instanceof LabelInfo labelInfo) {
-                if(buffer.size() <= 0) {
-                    // 버퍼에 아무것도 없으면 무시
-                    continue;
+                if(buffer.isEmpty()) {
+                    if(labelInfo.value().equals(IRETURN) || labelInfo.value() instanceof Return) {
+                        // 라벨이 리턴인 경우
+                        // 버퍼에 있는 것들을 그룹으로 만들고 리턴
+                        returnLabel = labelInfo;
+                    }
                 } else if(buffer.size() == 1) {
                     // 버퍼에 하나만 있으면 그룹을 만들지 않고 그냥 추가
-                    ConditionLeafNode leaf = buffer.get(0);
+                    ConditionLeafNode leaf = buffer.getFirst();
                     groups.add(leaf);
                     buffer.clear();
-                } else if(buffer.size() > 1) {
+                } else {
                     // 버퍼에 여러개가 있으면 그룹을 만들어서 추가
                     // 그룹을 종료할 타이밍
-                    ConditionGroupNode group = new ConditionGroupNode();
-                    group.setLabelInfo(labelInfo); // 그룹의 기준 라벨 설정
+                    ConditionGroupNode group = new ConditionGroupNode(labelInfo);
                     for (ConditionLeafNode leaf : buffer) {
                         group.addChild(leaf);
                     }
@@ -693,7 +696,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
         }
 
-        ConditionGroupNode root = new ConditionGroupNode();
+        ConditionGroupNode root = new ConditionGroupNode(returnLabel);
         for (ConditionNode group : groups) {
             root.addChild(group);
         }
@@ -707,8 +710,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 //        List<ConditionExpression> results = new ArrayList<>(exprStack.size());
 
         ConditionGroupNode root = buildFlatGroups(exprStack); // 너가 이미 만든 1차 결과
-//        ConditionTreeBuilder builder = new ConditionTreeBuilder();
-//        List<ConditionGroupNode> nestedTree = builder.buildNestedTree(flatGroups);
+
+        ConditionTreeBuilder builder = new ConditionTreeBuilder();
+        ConditionGroupNode nestedTree = builder.buildNestedTree(root);
 
         {
             //value stack의 값을 순환하며 and, or 및 비교 구문 정리

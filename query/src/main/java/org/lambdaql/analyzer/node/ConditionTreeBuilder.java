@@ -8,17 +8,53 @@ import java.util.List;
 public class ConditionTreeBuilder {
 
     public ConditionGroupNode buildNestedTree(ConditionGroupNode root) {
-        ConditionLeafNode current = root.getFirstLeaf();
-        int idx = 1;
-        while (current != null) {
-            current = current.getNextLeaf();
-            LabelInfo info = current.getLabelInfo();
-            if (info != null && info.value() == null) {
-                ConditionGroupNode group = current.getParentGroup();
+        List<ConditionLeafNode> leafs = root.leafs();
+        int idx = 0;
+        for (ConditionLeafNode leaf : leafs) {
+            if(idx == 0) {
+                idx++;
+                continue;
             }
-
             idx++;
+
+            LabelInfo info = leaf.getLabelInfo();
+            if (info != null && info.value() == null) {
+                ConditionGroupNode group = leaf.getParentGroup();
+                if (group.getLabelInfo() == info) {
+                    //자신의 그룹에서 그룹핑이 된 경우
+                    //FIXME 다만 자신의 그룹에서 첫번째인 경우는 제외
+                    ConditionGroupNode newGroup = new ConditionGroupNode(info);
+                    List<ConditionNode> siblings =group.getSiblingsFrom(leaf, true);
+                    for (ConditionNode sibling : siblings) {
+                        newGroup.addChild(sibling);
+                    }
+                    group.addChild(newGroup);
+                }
+            }
         }
+//        ConditionLeafNode current = root.getFirstLeaf();
+//        int idx = 1;
+//        while (current != null) {
+//            current = current.getNextLeaf();
+//            LabelInfo info = current.getLabelInfo();
+//            if (info != null && info.value() == null) {
+//                ConditionGroupNode group = current.getParentGroup();
+//                if(group.getLabelInfo() == info) {
+//                    //자신의 그룹에서 그룹핑이 된 경우
+//                    ConditionGroupNode newGroup = new ConditionGroupNode(info);
+//
+////                    List<ConditionNode> siblings =group.getSiblingsFrom(current, true);
+////                    for (ConditionNode sibling : siblings) {
+////                        newGroup.addChild(sibling);
+////                    }
+////                    group.addChild(newGroup);
+//                }
+//
+//
+//            }
+//
+//            idx++;
+//        }
         return root;
     }
 
@@ -34,8 +70,7 @@ public class ConditionTreeBuilder {
                     if (info != null && info.value() == null) {
                         int matchIndex = findGroupIndexWithLabelDeep(groups, i + 1, info);
                         if (matchIndex != -1) {
-                            ConditionGroupNode newGroup = new ConditionGroupNode();
-                            newGroup.setLabelInfo(info);
+                            ConditionGroupNode newGroup = new ConditionGroupNode(info);
                             for (int k = i; k <= matchIndex; k++) {
                                 newGroup.addChild(groups.get(k));
                             }
@@ -75,8 +110,7 @@ public class ConditionTreeBuilder {
                         int matchEnd = findGroupWithLabel(flatGroups, info, i + 1);
                         if (matchEnd != -1) {
                             // i부터 matchEnd까지 묶어서 새로운 그룹 생성
-                            ConditionGroupNode newGroup = new ConditionGroupNode();
-                            newGroup.setLabelInfo(info); // ⬅ 기준이 된 labelInfo 저장
+                            ConditionGroupNode newGroup = new ConditionGroupNode(info);
                             for (int k = i; k <= matchEnd; k++) {
                                 newGroup.addChild(flatGroups.get(k));
                             }
@@ -174,8 +208,7 @@ public class ConditionTreeBuilder {
                 if (targetLabel != null) {
                     int matchIndex = findGroupIndexWithLabelAmongSiblings(children, targetLabel, i + 1);
                     if (matchIndex != -1) {
-                        ConditionGroupNode newGroup = new ConditionGroupNode();
-                        newGroup.setLabelInfo(targetLabel);
+                        ConditionGroupNode newGroup = new ConditionGroupNode(targetLabel);
                         for (int k = i; k <= matchIndex; k++) {
                             newGroup.addChild(children.get(k));
                         }

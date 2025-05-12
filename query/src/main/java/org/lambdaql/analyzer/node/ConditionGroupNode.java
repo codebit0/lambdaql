@@ -13,9 +13,18 @@ public final class ConditionGroupNode implements ConditionNode {
     private ConditionLeafNode firstLeaf;
     private ConditionLeafNode lastLeaf;
 
+    private static final ConditionGroupNode ROOT = new ConditionGroupNode();
+
+    private ConditionGroupNode(){
+    }
+
+    public ConditionGroupNode(LabelInfo labelInfo) {
+        this.labelInfo = labelInfo;
+    }
+
     @Getter
     @Setter
-    private ConditionGroupNode parent;
+    private ConditionGroupNode parent = ROOT;
 
     public void addChild(ConditionNode node) {
         children.add(node);
@@ -54,6 +63,20 @@ public final class ConditionGroupNode implements ConditionNode {
 
     public List<ConditionNode> getChildren() { return children; }
     public LabelInfo getLabelInfo() { return labelInfo; }
+
+    public List<ConditionLeafNode> leafs() {
+        List<ConditionLeafNode> list = new ArrayList<>();
+        ConditionLeafNode current = firstLeaf;
+        while (current != null) {
+            list.add(current);
+            if (current == lastLeaf) break;
+            current = current.getNextLeaf();
+        }
+        return list;
+    }
+
+
+    @Deprecated
     public void setLabelInfo(LabelInfo info) { this.labelInfo = info; }
 
     public List<ConditionNode> getSiblings() {
@@ -68,6 +91,28 @@ public final class ConditionGroupNode implements ConditionNode {
         return siblings;
     }
 
+    public List<ConditionNode> getSiblingsFrom(ConditionNode node, boolean remove) {
+        List<ConditionNode> siblings = new ArrayList<>();
+        int index = children.indexOf(node);
+        if (index == -1) return siblings;
+
+        for (int i = index; i < children.size(); i++) {
+            siblings.add(children.get(i));
+        }
+
+        if (remove) {
+            // 주의: 한 번에 삭제해야 인덱스 꼬임 없음
+            children.subList(index, children.size()).clear();
+        }
+
+        return siblings;
+    }
+
+
+
+    public boolean isRoot() {
+        return parent == ROOT;
+    }
 }
 
 

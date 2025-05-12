@@ -2,9 +2,11 @@ package org.lambdaql.analyzer.node;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.experimental.Accessors;
 import org.lambdaql.analyzer.ConditionExpression;
 import org.lambdaql.analyzer.label.LabelInfo;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 public final class ConditionLeafNode implements ConditionNode {
@@ -20,8 +22,21 @@ public final class ConditionLeafNode implements ConditionNode {
         this.labelInfo = labelInfo;
     }
 
+    public List<ConditionNode> getSiblings() {
+        List<ConditionNode> siblings = new ArrayList<>();
+
+        for (ConditionNode node : parentGroup.getChildren()) {
+            if (node != this) {
+                siblings.add(node);
+            }
+        }
+        return siblings;
+    }
+
     public void setNextLeaf(ConditionLeafNode next) { this.nextLeaf = next; }
 
     public ConditionLeafNode getNextLeaf() { return nextLeaf; }
+
+
 }
 
