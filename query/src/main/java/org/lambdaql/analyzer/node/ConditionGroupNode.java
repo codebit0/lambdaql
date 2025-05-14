@@ -2,11 +2,13 @@ package org.lambdaql.analyzer.node;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.lambdaql.analyzer.label.LabelInfo;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Accessors(fluent = true)
 public final class ConditionGroupNode implements ConditionNode {
     private final List<ConditionNode> children = new ArrayList<>();
     private LabelInfo labelInfo;
@@ -29,11 +31,11 @@ public final class ConditionGroupNode implements ConditionNode {
     public void addChild(ConditionNode node) {
         children.add(node);
         if (node instanceof ConditionLeafNode leaf) {
-            leaf.setGroup(this); // ⬅ 연결
+            leaf.group(this); // ⬅ 연결
             connectLeaf(leaf);         // 기존 B+Leaf 연결
         } else if (node instanceof ConditionGroupNode group) {
-            group.setParent(this);
-            connectLeafRange(group.getFirstLeaf(), group.getLastLeaf());
+            group.parent(this);
+            connectLeafRange(group.firstLeaf(), group.lastLeaf());
         }
     }
 
@@ -42,7 +44,7 @@ public final class ConditionGroupNode implements ConditionNode {
             firstLeaf = leaf;
             lastLeaf = leaf;
         } else {
-            lastLeaf.setNextLeaf(leaf);
+            lastLeaf.nextLeaf(leaf);
             lastLeaf = leaf;
         }
     }
@@ -51,18 +53,17 @@ public final class ConditionGroupNode implements ConditionNode {
         if (from == null || to == null) return;
         if (firstLeaf == null) {
             firstLeaf = from;
-            lastLeaf = to;
         } else {
-            lastLeaf.setNextLeaf(from);
-            lastLeaf = to;
+            lastLeaf.nextLeaf(from);
         }
+        lastLeaf = to;
     }
 
-    public ConditionLeafNode getFirstLeaf() { return firstLeaf; }
-    public ConditionLeafNode getLastLeaf() { return lastLeaf; }
+    public ConditionLeafNode firstLeaf() { return firstLeaf; }
+    public ConditionLeafNode lastLeaf() { return lastLeaf; }
 
-    public List<ConditionNode> getChildren() { return children; }
-    public LabelInfo getLabelInfo() { return labelInfo; }
+    public List<ConditionNode> children() { return children; }
+    public LabelInfo labelInfo() { return labelInfo; }
 
     public List<ConditionLeafNode> leafs() {
         List<ConditionLeafNode> list = new ArrayList<>();
@@ -70,20 +71,16 @@ public final class ConditionGroupNode implements ConditionNode {
         while (current != null) {
             list.add(current);
             if (current == lastLeaf) break;
-            current = current.getNextLeaf();
+            current = current.nextLeaf();
         }
         return list;
     }
 
-
-    @Deprecated
-    public void setLabelInfo(LabelInfo info) { this.labelInfo = info; }
-
-    public List<ConditionNode> getSiblings() {
+    public List<ConditionNode> siblings() {
         List<ConditionNode> siblings = new ArrayList<>();
         if (parent == null) return siblings;
 
-        for (ConditionNode node : parent.getChildren()) {
+        for (ConditionNode node : parent.children()) {
             if (node != this) {
                 siblings.add(node);
             }
@@ -91,7 +88,7 @@ public final class ConditionGroupNode implements ConditionNode {
         return siblings;
     }
 
-    public List<ConditionNode> getSiblingsFrom(ConditionNode node, boolean remove) {
+    public List<ConditionNode> siblingsFrom(ConditionNode node, boolean remove) {
         List<ConditionNode> siblings = new ArrayList<>();
         int index = children.indexOf(node);
         if (index == -1) return siblings;
@@ -112,6 +109,15 @@ public final class ConditionGroupNode implements ConditionNode {
 
     public boolean isRoot() {
         return parent == ROOT;
+    }
+
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ConditionGroupNode{");
+        sb.append("labelInfo=").append(labelInfo);
+        sb.append(", isRoot=").append(isRoot());
+        sb.append('}');
+        return sb.toString();
     }
 }
 
