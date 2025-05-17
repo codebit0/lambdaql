@@ -14,10 +14,9 @@ import java.util.List;
 public final class ConditionLeafNode implements ConditionNode {
     private final ConditionExpression condition;
     private final LabelInfo labelInfo;
-    private ConditionLeafNode nextLeaf;
 
     @Setter
-    private ConditionGroupNode group;
+    ConditionGroupNode group;
 
     public ConditionLeafNode(ConditionExpression condition, LabelInfo labelInfo) {
         this.condition = condition;
@@ -34,10 +33,6 @@ public final class ConditionLeafNode implements ConditionNode {
         }
         return siblings;
     }
-
-    void nextLeaf(ConditionLeafNode next) { this.nextLeaf = next; }
-
-    public ConditionLeafNode nextLeaf() { return nextLeaf; }
 
     public String toString() {
         return "ConditionLeafNode{" +

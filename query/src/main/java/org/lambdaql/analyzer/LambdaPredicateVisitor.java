@@ -6,7 +6,6 @@ import org.lambdaql.analyzer.label.Return;
 import org.lambdaql.analyzer.node.ConditionGroupNode;
 import org.lambdaql.analyzer.node.ConditionLeafNode;
 import org.lambdaql.analyzer.node.ConditionNode;
-import org.lambdaql.analyzer.node.ConditionTreeBuilder;
 import org.lambdaql.query.QueryBuilder;
 import org.objectweb.asm.*;
 
@@ -696,7 +695,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
         }
 
-        ConditionGroupNode root = new ConditionGroupNode(returnLabel);
+        ConditionGroupNode root = ConditionGroupNode.root(returnLabel);
         for (ConditionNode group : groups) {
             root.addChild(group);
         }
@@ -707,12 +706,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
     public ConditionExpression getConditionExpr() {
         if (exprStack.isEmpty()) return null;
-//        List<ConditionExpression> results = new ArrayList<>(exprStack.size());
-
+        List<Object> list = valueStack.reversed().stream().toList();
         ConditionGroupNode root = buildFlatGroups(exprStack); // 너가 이미 만든 1차 결과
-
-        ConditionTreeBuilder builder = new ConditionTreeBuilder();
-        ConditionGroupNode nestedTree = builder.buildNestedTree(root);
+        ConditionGroupNode.makeGrouping(root);
 
         {
             //value stack의 값을 순환하며 and, or 및 비교 구문 정리

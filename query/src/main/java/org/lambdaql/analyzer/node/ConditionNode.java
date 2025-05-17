@@ -1,3 +1,7 @@
 package org.lambdaql.analyzer.node;
 
-public sealed interface ConditionNode permits ConditionGroupNode, ConditionLeafNode {}
+import org.lambdaql.analyzer.label.LabelInfo;
+
+public sealed interface ConditionNode permits ConditionGroupNode, ConditionLeafNode {
+    LabelInfo labelInfo();
+}
