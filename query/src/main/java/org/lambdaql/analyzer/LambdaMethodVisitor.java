@@ -1,5 +1,6 @@
 package org.lambdaql.analyzer;
 
+import org.lambdaql.analyzer.grouping.ConditionGroup;
 import org.lambdaql.query.QueryBuilder;
 import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
@@ -17,7 +18,7 @@ public class LambdaMethodVisitor extends ClassVisitor {
     private final QueryBuilder queryBuilder;
     private final List<Class<?>> entityClasses;
     private final SerializedLambda serializedLambda;
-    private ConditionExpression conditionExpr;
+    private ConditionGroup conditionExpr;
 
     private final String implMethod;
 
@@ -35,21 +36,6 @@ public class LambdaMethodVisitor extends ClassVisitor {
     public MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
         if (name.equals(implMethod)) {
             System.out.println(" > visitMethod: " + name + " " + desc+ " " + desc+ " signature " + signature+ " exceptions " + exceptions);
-
-            /*ManagedType<?> managedType = metamodel.managedType(entityClasses.getFirst());
-            managedType.getAttributes().stream().forEach(attr-> {
-
-                if (attr instanceof SingularAttributeImpl) {
-                    SingularAttributeImpl<?, ?> hAttr = (SingularAttributeImpl<?, ?>) attr;
-                    System.out.println(hAttr);
-                }
-            });
-            EntityType<?> entity = metamodel.entity(entityClasses.getFirst());
-            entity.getAttributes().forEach( a-> {
-                        System.out.println(a);
-                    }
-            );
-            */
             System.out.println("serializedLambda getCapturingClass: "+serializedLambda.getCapturingClass());
             System.out.println("serializedLambda getFunctionalInterfaceClass: "+serializedLambda.getFunctionalInterfaceClass());
             System.out.println("serializedLambda getFunctionalInterfaceMethodName: "+serializedLambda.getFunctionalInterfaceMethodName());
@@ -65,15 +51,15 @@ public class LambdaMethodVisitor extends ClassVisitor {
             return new LambdaPredicateVisitor(queryBuilder, serializedLambda, lambdaVariable, access) {
                 @Override
                 public void visitEnd() {
-                    conditionExpr = getConditionExpr();
                     super.visitEnd();
+                    conditionExpr = getConditionExpr();
                 }
             };
         }
         return null;
     }
 
-    public ConditionExpression getConditionExpr() {
+    public ConditionGroup getConditionExpr() {
         return conditionExpr;
     }
 }

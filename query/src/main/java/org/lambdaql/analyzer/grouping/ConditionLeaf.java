@@ -1,4 +1,4 @@
-package org.lambdaql.analyzer.node;
+package org.lambdaql.analyzer.grouping;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -11,14 +11,14 @@ import java.util.List;
 
 @Getter
 @Accessors(fluent = true)
-public final class ConditionLeafNode implements ConditionNode {
+public final class ConditionLeaf implements ConditionNode {
     private final ConditionExpression condition;
     private final LabelInfo labelInfo;
 
     @Setter
-    ConditionGroupNode group;
+    ConditionGroup group;
 
-    public ConditionLeafNode(ConditionExpression condition, LabelInfo labelInfo) {
+    public ConditionLeaf(ConditionExpression condition, LabelInfo labelInfo) {
         this.condition = condition;
         this.labelInfo = labelInfo;
     }
@@ -35,7 +35,7 @@ public final class ConditionLeafNode implements ConditionNode {
     }
 
     public String toString() {
-        return "ConditionLeafNode{" +
+        return "ConditionLeaf{" +
                 "labelInfo=" + labelInfo +
                 ", condition=" + condition +
                 '}';

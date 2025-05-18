@@ -24,7 +24,6 @@ import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.OffsetDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -154,6 +153,17 @@ class QueryBuilderTest {
     }
 
     @Test
+    void selectAndOrLongConditions() {
+        long p1 = 70;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+
+        SelectQuery.SelectWhere<Order> where = query.where(o ->
+                p1 == 1 && p1 != 100 || p1 > 1 && p1 >=1 || p1 < 100 && p1<=100
+        );
+    }
+
+    @Test
     void selectUnBracketsConditions() {
         boolean p0 = true;
         boolean p1 = false;
@@ -173,11 +183,24 @@ class QueryBuilderTest {
         boolean p1 = false;
         boolean p2 = false;
         boolean p3 = true;
+        int p4 = 1;
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
-        SelectQuery.SelectWhere<Order> where = query.where(o ->
+//        SelectQuery.SelectWhere<Order> where1 = query.where(o ->
+//                p0 == true && (p1 == true || p0 == true || p2 == true) && p3 == true
+//        );
+//
+        SelectQuery.SelectWhere<Order> where2 = query.where(o ->
                 p0 && (p1 || p0 || p2) && p3
+        );
+//
+//        SelectQuery.SelectWhere<Order> where3 = query.where(o ->
+//                p4 == 1 && (p4 != 1 || p4 != 0 || p2) && p3
+//        );
+
+        SelectQuery.SelectWhere<Order> where4 = query.where(o ->
+                p0 == true && (p1 != true || p0 == false || p2 != false) && p3 == true
         );
     }
 
@@ -285,7 +308,7 @@ class QueryBuilderTest {
          */
         //query.where((o) -> (p0 == 1 && p1 == 2 || p3 == 4 && p4 == 5) && (p5 == 6 || p6 == 7 && p2 == 3) || p0 == 0 && p1 == 0);
         SelectQuery.SelectWhere<Order> where1 = query.where(o ->
-                (((p0 == 1 && p1 == 2) || (p3 == 4 && p4 == 5)) && (p5 == 6 || (p6 == 7 && p2 == 3))) || (p0 == 0 && p1 == 0 || p0 == 2 && p1 == 2)
+                (((p0 != 1 && p1 == 2) || (p3 == 4 && p4 == 5)) && (p5 == 6 || (p6 == 7 && p2 == 3))) || (p0 == 0 && p1 == 0 || p0 == 2 && p1 == 2)
         );
 
         /**
@@ -352,27 +375,44 @@ class QueryBuilderTest {
         SelectQuery.SelectWhere<Order> where1 = query.where(o ->
                 (p0 == 1 && p1 == 2 || p2 == 3)? (p3 == 4 && p4 == 5): (p5 == 6 || p6 == 7)
         );
+    }
+
+    @Test
+    void selectTernaryConditions2() {
+
+        int p0 = 1;
+        int p1 = 2;
+        int p2 = 3;
+        int p3 = 4;
+        int p4 = 5;
+        int p5 = 6;
+        int p6 = 7;
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
 
         /**
-         * 0 = {ComparisonBinaryCondition@14204} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1739770043, value=null))"
-         * 1 = {ComparisonBinaryCondition@14205} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1739770043, value=null))"
-         * 2 = {ComparisonBinaryCondition@14206} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1739770043, value=null))"
-         * 3 = {ComparisonBinaryCondition@14207} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L52439501, value=false))"
-         * 4 = {ComparisonBinaryCondition@14208} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L52439501, value=false))"
-         * 5 = {Goto@14209} "Goto[labelInfo=LabelInfo(label=L1224302486, value=172)]"
-         * 6 = {LabelInfo@14210} "LabelInfo(label=L52439501, value=false)"
-         * 7 = {Goto@14211} "Goto[labelInfo=LabelInfo(label=L1224302486, value=172)]"
-         * 8 = {LabelInfo@14212} "LabelInfo(label=L1739770043, value=null)"
-         * 9 = {ComparisonBinaryCondition@14213} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1438317505, value=true))"
-         * 10 = {ComparisonBinaryCondition@14214} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L616302301, value=false))"
-         * 11 = {LabelInfo@14215} "LabelInfo(label=L1438317505, value=true)"
-         * 12 = {Goto@14216} "Goto[labelInfo=LabelInfo(label=L1224302486, value=172)]"
-         * 13 = {LabelInfo@14217} "LabelInfo(label=L616302301, value=false)"
-         * 14 = {LabelInfo@14195} "LabelInfo(label=L1224302486, value=172)"
+         * 0 = {ComparisonBinaryCondition@14167} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L448432504, value=null))"
+         * 1 = {ComparisonBinaryCondition@14168} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L524225829, value=null))"
+         * 2 = {LabelInfo@14169} "LabelInfo(label=L448432504, value=null)"
+         * 3 = {ComparisonBinaryCondition@14170} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L854246299, value=null))"
+         * 4 = {LabelInfo@14171} "LabelInfo(label=L524225829, value=null)"
+         * 5 = {ComparisonBinaryCondition@14172} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1324399707, value=false))"
+         * 6 = {ComparisonBinaryCondition@14173} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1324399707, value=false))"
+         * 7 = {Goto@14174} "Goto[labelInfo=LabelInfo(label=L8633259, value=172)]"
+         * 8 = {LabelInfo@14175} "LabelInfo(label=L1324399707, value=false)"
+         * 9 = {Goto@14176} "Goto[labelInfo=LabelInfo(label=L8633259, value=172)]"
+         * 10 = {LabelInfo@14177} "LabelInfo(label=L854246299, value=null)"
+         * 11 = {ComparisonBinaryCondition@14178} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1224302486, value=true))"
+         * 12 = {ComparisonBinaryCondition@14179} "ComparisonBinaryCondition(labelInfo=LabelInfo(label=L1438317505, value=false))"
+         * 13 = {LabelInfo@14180} "LabelInfo(label=L1224302486, value=true)"
+         * 14 = {Goto@14181} "Goto[labelInfo=LabelInfo(label=L8633259, value=172)]"
+         * 15 = {LabelInfo@14182} "LabelInfo(label=L1438317505, value=false)"
+         * 16 = {LabelInfo@10907} "LabelInfo(label=L8633259, value=172)"
          */
-        SelectQuery.SelectWhere<Order> where2 = query.where(o ->
-                (p0 == 1 && p1 == 2 && p2 == 3)? (p3 == 4 && p4 == 5): (p5 == 6 || p6 == 7)
+        SelectQuery.SelectWhere<Order> where1 = query.where(o ->
+                (p0 == 1)? (p1 == 4): p2 == 6
         );
+
     }
 
     @Test

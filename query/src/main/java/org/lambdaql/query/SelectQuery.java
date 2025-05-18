@@ -3,6 +3,7 @@ package org.lambdaql.query;
 import org.lambdaql.analyzer.ConditionExpression;
 import org.lambdaql.analyzer.LambdaWhereAnalyzer;
 import org.lambdaql.analyzer.Renderer;
+import org.lambdaql.analyzer.grouping.ConditionGroup;
 
 import java.io.Serializable;
 import java.util.List;
@@ -11,7 +12,7 @@ public class SelectQuery<T> {
 
     private final Class<T> entityClass;
     protected final QueryBuilder queryBuilder;
-    private ConditionExpression condition;
+    private ConditionGroup condition;
 
     @FunctionalInterface
     public interface Where<U> extends Serializable {

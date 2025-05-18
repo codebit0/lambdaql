@@ -1,5 +1,7 @@
 package org.lambdaql.analyzer;
 
+import org.lambdaql.analyzer.grouping.ConditionGroup;
+import org.lambdaql.analyzer.randerer.JPQLWhereRenderer;
 import org.lambdaql.query.QueryBuilder;
 import org.lambdaql.query.SelectQuery.Where;
 import org.objectweb.asm.*;
@@ -7,18 +9,23 @@ import org.objectweb.asm.*;
 import java.lang.invoke.SerializedLambda;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class LambdaWhereAnalyzer {
 
+    private static final ConcurrentHashMap<Where<?>, ConditionExpression> cache = new ConcurrentHashMap<>();
+
     private final QueryBuilder queryBuilder;
     private final List<Class<?>> entityClass;
+
+
 
     public LambdaWhereAnalyzer(QueryBuilder queryBuilder, List<Class<?>> entityClass) {
         this.queryBuilder = queryBuilder;
         this.entityClass = entityClass;
     }
 
-    public <T> ConditionExpression analyze(Where<T> whereClause) {
+    public <T> ConditionGroup analyze(Where<T> whereClause) {
         try {
             Method method = whereClause.getClass().getDeclaredMethod("writeReplace");
             method.setAccessible(true);
@@ -30,7 +37,11 @@ public class LambdaWhereAnalyzer {
 
                 LambdaMethodVisitor visitor = new LambdaMethodVisitor(queryBuilder, method, sl, entityClass);
                 reader.accept(visitor, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
-                return visitor.getConditionExpr();
+                ConditionGroup expr = visitor.getConditionExpr();
+                JPQLWhereRenderer renderer = new JPQLWhereRenderer();
+                String jpql = renderer.render(expr);
+                System.out.println("JPQL: " + jpql);
+                return expr;
             }
         } catch (Exception e) {
             /*try {

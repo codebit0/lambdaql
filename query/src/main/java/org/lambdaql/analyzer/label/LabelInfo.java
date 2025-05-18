@@ -14,6 +14,7 @@ import org.objectweb.asm.Label;
 @ToString
 @EqualsAndHashCode(of = "label")
 public class LabelInfo implements ConditionExpression {
+
     private final Label label;
 
     @Setter

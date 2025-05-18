@@ -1,4 +1,4 @@
-package org.lambdaql.analyzer.node;
+package org.lambdaql.analyzer.grouping;
 
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -8,7 +8,7 @@ import java.util.*;
 import java.util.stream.Stream;
 
 @Accessors(fluent = true)
-public final class ConditionGroupNode implements ConditionNode {
+public final class ConditionGroup implements ConditionNode {
     @Getter
     private final List<ConditionNode> children = new ArrayList<>();
 
@@ -16,36 +16,36 @@ public final class ConditionGroupNode implements ConditionNode {
     private LabelInfo labelInfo;
 
     @Getter
-    private ConditionGroupNode parent = null;
+    private ConditionGroup parent = null;
 
     @Getter
     private boolean isRoot = false;
 
-    private List<ConditionLeafNode> rootLeafs = new ArrayList<>();
+    private List<ConditionLeaf> rootLeafs = new ArrayList<>();
 
 
-    public static ConditionGroupNode root(LabelInfo labelInfo) {
-        return new ConditionGroupNode(labelInfo, true);
+    public static ConditionGroup root(LabelInfo labelInfo) {
+        return new ConditionGroup(labelInfo, true);
     }
 
-    public static void makeGrouping(ConditionGroupNode root) {
-        List<ConditionLeafNode> leafs = root.leafs();
-        for (ConditionLeafNode leaf : leafs) {
+    public static void makeGrouping(ConditionGroup root) {
+        List<ConditionLeaf> leafs = root.leafs();
+        for (ConditionLeaf leaf : leafs) {
             LabelInfo info = leaf.labelInfo();
             if (info != null && info.value() == null) {
-                ConditionGroupNode group = leaf.group();
+                ConditionGroup group = leaf.group();
                 if (group.labelInfo() == info) {
                     group.grouping(leaf);
                 } else  {
                     //자신의 그룹과 그룹핑되지 않는 다면 상위 그룹으로 이동하며 같은 라벨을 찾음
-                    ConditionGroupNode cursor = group;
+                    ConditionGroup cursor = group;
                     searchLoop: while (cursor != null) {
                         List<ConditionNode> siblings = cursor.siblings();
                         for (ConditionNode sibling : siblings) {
-                            if (sibling instanceof ConditionGroupNode siblingGroup &&
+                            if (sibling instanceof ConditionGroup siblingGroup &&
                                     info.equals(siblingGroup.labelInfo())) {
                                 // 같은 라벨을 찾았다면 현재 그룹 부터 찾음 그룹까지를 그룹핑
-                                ConditionGroupNode parent = cursor.parent();
+                                ConditionGroup parent = cursor.parent();
                                 parent.grouping(cursor, siblingGroup);
                                 break searchLoop;
                             }
@@ -57,23 +57,23 @@ public final class ConditionGroupNode implements ConditionNode {
         }
     }
 
-    private ConditionGroupNode(LabelInfo labelInfo, boolean isRoot) {
+    private ConditionGroup(LabelInfo labelInfo, boolean isRoot) {
         this.labelInfo = labelInfo;
         this.isRoot = isRoot;
     }
 
-    public ConditionGroupNode(LabelInfo labelInfo) {
+    public ConditionGroup(LabelInfo labelInfo) {
         this.labelInfo = labelInfo;
     }
 
     public void addChild(ConditionNode node) {
         children.add(node);
-        if (node instanceof ConditionLeafNode leaf) {
+        if (node instanceof ConditionLeaf leaf) {
             leaf.group = this;
             if(isRoot) {
                 rootLeafs.add(leaf);
             }
-        } else if (node instanceof ConditionGroupNode group) {
+        } else if (node instanceof ConditionGroup group) {
             group.parent =this;
             if(isRoot) {
                 rootLeafs.addAll(group.leafs());
@@ -81,29 +81,29 @@ public final class ConditionGroupNode implements ConditionNode {
         }
     }
 
-    public List<ConditionLeafNode> leafs() {
+    public List<ConditionLeaf> leafs() {
         if (isRoot) {
             return rootLeafs;
         }
-        List<ConditionLeafNode> list = new ArrayList<>();
+        List<ConditionLeaf> list = new ArrayList<>();
         this.children.forEach(node -> {
-            if (node instanceof ConditionLeafNode leaf) {
+            if (node instanceof ConditionLeaf leaf) {
                 list.add(leaf);
-            } else if (node instanceof ConditionGroupNode group) {
+            } else if (node instanceof ConditionGroup group) {
                 list.addAll(group.leafs());
             }
         });
         return list;
     }
 
-    public Stream<ConditionLeafNode> leafStream() {
+    public Stream<ConditionLeaf> leafStream() {
         if (isRoot) {
             return rootLeafs.stream();
         }
         return this.children.stream().flatMap(node -> {
-            if (node instanceof ConditionLeafNode leaf) {
+            if (node instanceof ConditionLeaf leaf) {
                 return Stream.of(leaf);
-            } else if (node instanceof ConditionGroupNode group) {
+            } else if (node instanceof ConditionGroup group) {
                 return group.leafStream();
             }
             return Stream.empty();
@@ -122,7 +122,7 @@ public final class ConditionGroupNode implements ConditionNode {
         return siblings;
     }
 
-    public ConditionGroupNode grouping(ConditionNode start) {
+    public ConditionGroup grouping(ConditionNode start) {
         int startIndex = children.indexOf(start);
         if (startIndex == 0)
             return this;
@@ -130,7 +130,7 @@ public final class ConditionGroupNode implements ConditionNode {
             throw new IllegalArgumentException("Invalid range for grouping");
 
         List<ConditionNode> range = new ArrayList<>(children.subList(startIndex, children.size()));
-        ConditionGroupNode newGroup = new ConditionGroupNode(range.getFirst().labelInfo());
+        ConditionGroup newGroup = new ConditionGroup(range.getFirst().labelInfo());
         newGroup.parent = this;
         for (ConditionNode node : range) {
             newGroup.addChild(node); // skipLeafConnect = true
@@ -142,7 +142,7 @@ public final class ConditionGroupNode implements ConditionNode {
         return newGroup;
     }
 
-    public ConditionGroupNode grouping(ConditionNode start, ConditionNode end) {
+    public ConditionGroup grouping(ConditionNode start, ConditionNode end) {
         int startIndex = children.indexOf(start);
         int endIndex = children.indexOf(end);
         if (startIndex == 0 && endIndex == children.size() - 1)
@@ -151,7 +151,7 @@ public final class ConditionGroupNode implements ConditionNode {
             throw new IllegalArgumentException("Invalid range for grouping");
 
         List<ConditionNode> range = new ArrayList<>(children.subList(startIndex, endIndex + 1));
-        ConditionGroupNode newGroup = new ConditionGroupNode(range.getLast().labelInfo());
+        ConditionGroup newGroup = new ConditionGroup(range.getLast().labelInfo());
         newGroup.parent = this;
         for (ConditionNode node : range) {
             newGroup.addChild(node); // skipLeafConnect = true
@@ -165,7 +165,7 @@ public final class ConditionGroupNode implements ConditionNode {
 
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("ConditionGroupNode{");
+        sb.append("ConditionGroup{");
         sb.append("labelInfo=").append(labelInfo);
         sb.append(", isRoot=").append(isRoot());
         sb.append('}');
