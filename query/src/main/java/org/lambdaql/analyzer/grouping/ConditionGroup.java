@@ -28,35 +28,6 @@ public final class ConditionGroup implements ConditionNode {
         return new ConditionGroup(labelInfo, true);
     }
 
-    public static void makeGrouping(ConditionGroup root) {
-        List<ConditionLeaf> leafs = root.leafs();
-        for (ConditionLeaf leaf : leafs) {
-            LabelInfo info = leaf.labelInfo();
-            if (info != null && info.value() == null) {
-                ConditionGroup group = leaf.group();
-                if (group.labelInfo() == info) {
-                    group.grouping(leaf);
-                } else  {
-                    //자신의 그룹과 그룹핑되지 않는 다면 상위 그룹으로 이동하며 같은 라벨을 찾음
-                    ConditionGroup cursor = group;
-                    searchLoop: while (cursor != null) {
-                        List<ConditionNode> siblings = cursor.siblings();
-                        for (ConditionNode sibling : siblings) {
-                            if (sibling instanceof ConditionGroup siblingGroup &&
-                                    info.equals(siblingGroup.labelInfo())) {
-                                // 같은 라벨을 찾았다면 현재 그룹 부터 찾음 그룹까지를 그룹핑
-                                ConditionGroup parent = cursor.parent();
-                                parent.grouping(cursor, siblingGroup);
-                                break searchLoop;
-                            }
-                        }
-                        cursor = cursor.parent();
-                    }
-                }
-            }
-        }
-    }
-
     private ConditionGroup(LabelInfo labelInfo, boolean isRoot) {
         this.labelInfo = labelInfo;
         this.isRoot = isRoot;

@@ -38,9 +38,9 @@ public class LambdaWhereAnalyzer {
                 LambdaMethodVisitor visitor = new LambdaMethodVisitor(queryBuilder, method, sl, entityClass);
                 reader.accept(visitor, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
                 ConditionGroup expr = visitor.getConditionExpr();
-                JPQLWhereRenderer renderer = new JPQLWhereRenderer();
-                String jpql = renderer.render(expr);
-                System.out.println("JPQL: " + jpql);
+                JPQLWhereRenderer renderer = new JPQLWhereRenderer(expr);
+
+                System.out.println("JPQL: " + renderer);
                 return expr;
             }
         } catch (Exception e) {

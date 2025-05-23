@@ -16,6 +16,8 @@ import static org.objectweb.asm.util.Printer.*;
 
 public class LambdaPredicateVisitor extends MethodVisitor {
 
+    private static final String OPEN_BRACKET = "(";
+    private static final String CLOSE_BRACKET = ")";
     private final QueryBuilder queryBuilder;
     private final List<Class<?>> entityClasses;
     private final SerializedLambda serializedLambda;
@@ -565,7 +567,8 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         List<ConditionLeaf> buffer = new ArrayList<>();
 
         LabelInfo returnLabel = null;
-        for (Object item : valueStack.reversed()) {
+        Deque<Object> reversed = valueStack.reversed();
+        for (Object item : reversed) {
             if (item instanceof ComparisonBinaryCondition cmp) {
                 LabelInfo labelInfo = cmp.labelInfo(); // 추출 필요
                 ConditionLeaf leaf = new ConditionLeaf(cmp, labelInfo);
@@ -602,11 +605,40 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         return root;
     }
 
+    public void makeGrouping(ConditionGroup root) {
+        List<ConditionLeaf> leafs = root.leafs();
+        for (ConditionLeaf leaf : leafs) {
+            LabelInfo info = leaf.labelInfo();
+            if (info != null && info.value() == null) {
+                ConditionGroup group = leaf.group();
+                if (group.labelInfo() == info) {
+                    group.grouping(leaf);
+                } else  {
+                    //자신의 그룹과 그룹핑되지 않는 다면 상위 그룹으로 이동하며 같은 라벨을 찾음
+                    ConditionGroup cursor = group;
+                    searchLoop: while (cursor != null) {
+                        List<ConditionNode> siblings = cursor.siblings();
+                        for (ConditionNode sibling : siblings) {
+                            if (sibling instanceof ConditionGroup siblingGroup &&
+                                    info.equals(siblingGroup.labelInfo())) {
+                                // 같은 라벨을 찾았다면 현재 그룹 부터 찾음 그룹까지를 그룹핑
+                                ConditionGroup parent = cursor.parent();
+                                parent.grouping(cursor, siblingGroup);
+                                break searchLoop;
+                            }
+                        }
+                        cursor = cursor.parent();
+                    }
+                }
+            }
+        }
+    }
+
     public ConditionGroup getConditionExpr() {
         if (valueStack.size() <= 1) return null;
 
         ConditionGroup root = buildFlatGroups(); // 1차 그룹핑
-        ConditionGroup.makeGrouping(root); //내부 그룹핑
+        makeGrouping(root); //내부 그룹핑
 
             //value stack의 값을 순환하며 and, or 및 비교 구문 정리
         LabelInfo beforeLabel = null;
@@ -615,7 +647,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 LabelInfo labelInfo = comparison.labelInfo();
                 Object labelValue = labelInfo.value();
                 Label label = labelInfo.label();
-                if (labelValue != null && labelValue instanceof Boolean b) {
+                if (labelValue instanceof Boolean b) {
                     //false인 조건은 operator를 반전시킴
                     //라벨이 false 이면 and 조건으로 다음과 결합
                     //라벨이 true이면 or 조건으로 다음과 결합
@@ -644,8 +676,41 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 }
             }
         }
-
+        List<Object> list = flattenGroups(root, 0);
+        System.out.println("flattenGroups: " + list);
         return root;
+    }
+
+    private List<Object> flattenGroups(ConditionGroup group, int depth) {
+        List<Object> results = new ArrayList<>();
+        List<ConditionNode> children = group.children();
+        int size = children.size();
+        boolean isRoot = group.isRoot();
+        if (!isRoot) {
+            results.add(OPEN_BRACKET);
+        }
+        for (int i = 0; i < size; i++) {
+            ConditionNode child = children.get(i);
+            if (child instanceof ConditionGroup g) {
+                List<Object> list = flattenGroups(g, depth + 1);
+                results.addAll(list);
+            } else if (child instanceof ConditionLeaf l) {
+                ConditionExpression expr = l.condition();
+                if (expr instanceof ComparisonBinaryCondition binary) {
+                    results.add(binary.left());
+                    results.add(binary.operator().symbol());
+                    results.add(binary.right());
+                    if(!isRoot && i == size -1) {
+                        //depth 만큼 닫기 괄호 추가
+                        results.add(CLOSE_BRACKET.repeat(depth));
+                    }
+                    if(!isRoot)
+                        results.add(binary.logicalOperator().name());
+                }
+            }
+
+        }
+        return results;
     }
 
 

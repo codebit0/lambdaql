@@ -56,17 +56,41 @@ class QueryBuilderTest {
     }
 
     @Test
-    void selectFromBasic() {
+    void selectFromBasicTest() {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
 
-        query.orderBy(o-> {
-//            return List.of(o::getCustomer, o::getCustomer);
-            List<Direction> asc = List.of(Direction.asc(o::getCustomer));
-            return asc;
-        });
+//        query.orderBy(o-> {
+////            return List.of(o::getCustomer, o::getCustomer);
+//            List<Direction> asc = List.of(Direction.asc(o::getCustomer));
+//            return asc;
+//        });
         SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getId() == 10);
-        assertEquals("SELECT * FROM orders", where0.toString());
+        assertEquals("SELECT * FROM order as o1 where o1.id = 10", where0.toString());
+    }
+
+    @Test
+    void selectFromBasicParameterBinding() {
+        long param1 = 10;
+
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+        SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getId() == param1);
+
+        assertEquals("o1.id = :param1", where0.toString());
+        assertEquals("SELECT * FROM order as o1 where o1.id = :param1", query.toString());
+    }
+
+    @Test
+    void selectLikeMethod() {
+        String param1 = "description";
+
+        QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
+        SelectQuery<Order> query = queryBuilder.from(Order.class);
+        SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getDescription().startsWith(param1));
+
+        assertEquals("o1.id like :param1", where0.toString());
+        assertEquals("SELECT * FROM order as o1 where o1.id = :param1", query.toString());
     }
 
     @Test
