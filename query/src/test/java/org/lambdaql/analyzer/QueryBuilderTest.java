@@ -76,6 +76,7 @@ class QueryBuilderTest {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
         SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getId() == param1);
+//        SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getId() +10L == param1);
 
         assertEquals("o1.id = :param1", where0.toString());
         assertEquals("SELECT * FROM order as o1 where o1.id = :param1", query.toString());
@@ -90,7 +91,7 @@ class QueryBuilderTest {
         SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getDescription().startsWith(param1));
 
         assertEquals("o1.id like :param1", where0.toString());
-        assertEquals("SELECT * FROM order as o1 where o1.id = :param1", query.toString());
+        assertEquals("SELECT * FROM order as o1 where o1.description like :param1", query.toString());
     }
 
     @Test

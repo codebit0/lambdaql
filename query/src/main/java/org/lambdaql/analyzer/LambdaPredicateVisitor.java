@@ -146,7 +146,11 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         boolean isStatic = methodSignature.isStatic();
         int paramCount = methodSignature.method().getParameterCount();
         Object[] params = new Object[paramCount];
-        boolean isEntity = false;
+
+        boolean includeEntityVariable = false;
+        boolean includeCapturedVariable = false;
+        boolean ownerEntityVariable = false;
+        boolean ownerCapturedVariable = false;
 
         Object peek = valueStack.peek();
         MethodStack beforeStack = null;
@@ -159,7 +163,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         for (int i = paramCount - 1; i >= 0; i--) {
             Object value = valueStack.pop();
             if (value instanceof EntityVariable) {
-                isEntity = true;
+                includeEntityVariable = true;
+            } else if(value instanceof ObjectCapturedVariable) {
+                includeCapturedVariable = true;
             }
             params[i] = value;
         }
@@ -169,22 +175,31 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         if (!isStatic) {
             Object o = valueStack.pop();
             if (o instanceof EntityVariable) {
-                isEntity = true;
+                includeEntityVariable = true;
+                ownerEntityVariable = true;
+            } else if(o instanceof ObjectCapturedVariable) {
+                includeCapturedVariable = true;
+                ownerCapturedVariable = true;
             }
             instance = o;
         }
 
         MethodStack methodStack = new MethodStack(instance, methodSignature, params);
-        methodStack.entity(isEntity);
+        //둘다 들어 가면 에러
+        if(includeEntityVariable && includeCapturedVariable) {
+            throw new IllegalStateException("Both EntityVariable and ObjectCapturedVariable cannot be included in the same method call.");
+        }
+        methodStack.includeEntityVariable(includeCapturedVariable);
+        methodStack.includeCapturedVariable(includeEntityVariable);
+        methodStack.ownerEntityVariable(ownerEntityVariable);
+        methodStack.ownerCapturedVariable(ownerCapturedVariable);
 
         if (beforeStack != null) {
-            beforeStack.entity(isEntity);
             beforeStack.addStack(methodStack);
             valueStack.push(methodStack);
         } else {
             valueStack.push(methodStack);
         }
-
 
         /*if (DATE_TYPES.contains(owner)) {
             Object right = valueStack.pop();
@@ -708,7 +723,6 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                         results.add(binary.logicalOperator().name());
                 }
             }
-
         }
         return results;
     }

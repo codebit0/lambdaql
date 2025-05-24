@@ -8,9 +8,13 @@ package org.lambdaql.analyzer;
  * @param sequenceIndex 호출 순서에 따른 인덱스 번호
  * @param opcodeIndex opcode 에서 지역변수 테이블을 참조하기 위한 인덱스 번호
  */
-public record EntityVariable(Class<?> type, String typeSignature, Object value, int sequenceIndex, int opcodeIndex) implements IColumn, ICapturedVariable {
+public record EntityVariable(Class<?> type, String typeSignature, String value, int sequenceIndex, int opcodeIndex) implements IColumn, ICapturedVariable {
 
     public EntityVariable(Class<?> type, String alias, int sequenceIndex, int opcodeIndex) {
         this(type, type.getCanonicalName().replaceAll("\\.", "/"), alias, sequenceIndex, opcodeIndex);
+    }
+
+    public String alias() {
+        return value;
     }
 }
