@@ -7,11 +7,10 @@ import org.lambdaql.analyzer.*;
 import org.lambdaql.analyzer.grouping.ConditionGroup;
 import org.lambdaql.analyzer.grouping.ConditionLeaf;
 import org.lambdaql.analyzer.grouping.ConditionNode;
+import org.lambdaql.function.JpqlFunction;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.lang.reflect.Method;
+import java.util.*;
 
 @Accessors(fluent = true)
 public class JPQLWhereRenderer {
@@ -47,6 +46,7 @@ public class JPQLWhereRenderer {
                 ConditionExpression expr = l.condition();
                 if (expr instanceof ComparisonBinaryCondition binary) {
                     Object left = binary.left();
+                    operandParse(left);
                     Object right = binary.right();
                     if (left instanceof ObjectCapturedVariable variable) {
                         String paramName = ":param" + variable.sequenceIndex();
@@ -66,6 +66,7 @@ public class JPQLWhereRenderer {
             }
 
         }
+
         return results;
     }
 
@@ -87,8 +88,22 @@ public class JPQLWhereRenderer {
         if (methodStack.includeEntityVariable()) {
             //엔티티가 포함된 메서드 스택은 엔티티로 변환
             Object owner = methodStack.owner();
-            if(owner != null && owner instanceof EntityExpression entity) {
+            if(owner != null && owner instanceof EntityVariable entity) {
                 //엔티티 클래스가 있는 경우
+                System.out.println(methodStack);
+                MethodSignature signature = methodStack.signature();
+                Method method = signature.method();
+                JpqlFunction jpqlFunction = JpqlFunction.findJpqlFunction(method);
+                if (jpqlFunction != null) {
+                    //JPQL 함수로 변환
+                    String expression = jpqlFunction.getExpressionPattern();
+                } else {
+                    //일반 메서드 호출로 변환
+                    String methodName = method.getName();
+                    methodName = methodNameToPropertyName(methodName);
+                    String expression = entity.alias() + "." + methodName;
+                    return expression;
+                }
             }
         } else {
             //엔티티가 포함되지 않은 메서드 스택은 일반적인 메서드 호출로 변환
@@ -99,5 +114,24 @@ public class JPQLWhereRenderer {
 
     private ICapturedVariable findCaptureVarInsn(int varIndex) {
         return lambdaVariable.getCapturedValueOpcodeIndex(varIndex);
+    }
+
+    private static String methodNameToPropertyName(String methodName) {
+        if (methodName.startsWith("get") && methodName.length() > 3) {
+            return decapitalize(methodName.substring(3));
+        } else if (methodName.startsWith("is") && methodName.length() > 2) {
+            return decapitalize(methodName.substring(2));
+        }
+        return methodName;
+    }
+
+    private static String decapitalize(String name) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+        if (name.length() > 1 && Character.isUpperCase(name.charAt(1))) {
+            return name;
+        }
+        return Character.toLowerCase(name.charAt(0)) + name.substring(1);
     }
 }

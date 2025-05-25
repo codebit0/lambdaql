@@ -3,6 +3,7 @@ package org.lambdaql.function;
 import lombok.Getter;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.time.*;
 import java.time.chrono.ChronoZonedDateTime;
 import java.time.temporal.Temporal;
@@ -45,8 +46,10 @@ public class JpqlFunction {
                     new FunctionDescriptor(Collection.class.getMethod("contains", Object.class), 1, 0));
             registerFunction(FunctionType.COLLECTION, "SIZE", "SIZE(%s)",
                     new FunctionDescriptor(Collection.class.getMethod("size"), 0));
+//            registerFunction(FunctionType.COLLECTION, "SIZE", "SIZE(%s)",
+//                    new FunctionDescriptor(Object[].class.getField("length")));
             registerFunction(FunctionType.COLLECTION, "SIZE", "SIZE(%s)",
-                    new FunctionDescriptor(Object[].class.getField("length")));
+                    new FunctionDescriptor(Array.class.getMethod("getLength", Object.class), 0));
 
             // DATETIME functions
             // LocalDate, LocalTime, LocalDateTime, OffsetDateTime, ZonedDateTime, Instant, ChronoZonedDateTime
@@ -218,7 +221,7 @@ public class JpqlFunction {
             registerFunction(FunctionType.STRING, "UPPER", "UPPER(%s)",
                     new FunctionDescriptor(String.class.getMethod("toUpperCase"), 0));
 
-        } catch (NoSuchMethodException | NoSuchFieldException e) {
+        } catch (NoSuchMethodException e) {
             throw new RuntimeException("Failed to register JPQL functions", e);
         }
     }
@@ -228,6 +231,24 @@ public class JpqlFunction {
             JpqlFunction function = new JpqlFunction(name, type, expressionPattern, descriptor);
             FUNCTION_MAP.computeIfAbsent(type, k -> new ArrayList<>()).add(function);
         }
+    }
+    /**
+     * 지정된 메서드에 해당하는 JPQL 함수를 찾습니다.
+     *
+     * @param targetMethod 검색할 메서드
+     * @return 해당하는 JPQL 함수, 없으면 null
+     */
+    //FIXME 메서드 public 제거
+    public static JpqlFunction findJpqlFunction(Method targetMethod) {
+        for (List<JpqlFunction> functions : FUNCTION_MAP.values()) {
+            for (JpqlFunction function : functions) {
+                FunctionDescriptor descriptor = function.getDescriptor();
+                if (descriptor.getMethod() != null && descriptor.getMethod().equals(targetMethod)) {
+                    return function;
+                }
+            }
+        }
+        return null;
     }
 
     private final String name;

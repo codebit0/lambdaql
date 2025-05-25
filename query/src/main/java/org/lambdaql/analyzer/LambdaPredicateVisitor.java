@@ -5,6 +5,7 @@ import org.lambdaql.analyzer.grouping.ConditionLeaf;
 import org.lambdaql.analyzer.label.Goto;
 import org.lambdaql.analyzer.label.LabelInfo;
 import org.lambdaql.analyzer.grouping.ConditionNode;
+import org.lambdaql.analyzer.randerer.JPQLWhereRenderer;
 import org.lambdaql.query.QueryBuilder;
 import org.objectweb.asm.*;
 
@@ -172,7 +173,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
         // static 이 아니면 인스턴스 객체도 꺼내야 함
         Object instance = null;
-        if (!isStatic) {
+        if (beforeStack == null && !isStatic) {
             Object o = valueStack.pop();
             if (o instanceof EntityVariable) {
                 includeEntityVariable = true;
@@ -365,6 +366,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 BinaryOperator.fromOpcode(opcode);
                 BinaryCondition condition = BinaryCondition.of(left, BinaryOperator.fromOpcode(opcode), right);
                 valueStack.push(condition);
+            }
+            case ARRAYLENGTH -> {
+                //배열 길이, length property 가 나오는 경우
             }
 //            case IAND -> {
 //                pushLogicalExpr(LogicalOperator.AND, exprStack.pop(), exprStack.pop());
@@ -693,6 +697,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         }
         List<Object> list = flattenGroups(root, 0);
         System.out.println("flattenGroups: " + list);
+        JPQLWhereRenderer renderer = new JPQLWhereRenderer(root);
         return root;
     }
 
