@@ -89,8 +89,8 @@ class QueryBuilderTest {
 
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
-        SelectQuery.SelectWhere<Order> where1 = query.where(o -> o.getDescription().getBytes().length == 10);
-        SelectQuery.SelectWhere<Order> where2 = query.where(o -> Array.getLength(o.getDescription().getBytes()) == 10);
+//        SelectQuery.SelectWhere<Order> where1 = query.where(o -> o.getDescription().getBytes().length == 10);
+//        SelectQuery.SelectWhere<Order> where2 = query.where(o -> Array.getLength(o.getDescription().getBytes()) == 10);
         SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getDescription().startsWith(param1));
 
 

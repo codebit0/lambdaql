@@ -666,7 +666,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
     }
 
     public ConditionGroup getConditionExpr() {
-        if (valueStack.size() <= 1) return null;
+        if (valueStack.size() == 0) return null;
 
         ConditionGroup root = buildFlatGroups(); // 1차 그룹핑
         makeGrouping(root); //내부 그룹핑

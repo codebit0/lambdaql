@@ -132,11 +132,13 @@ public class JPQLWhereRenderer {
             if (jpqlFunction != null) {
                 //JPQL 함수로 변환
                 for (Object arg : methodStack.args()) {
-                    System.out.println("JPQL Function arg: " + arg);
+                    System.out.println("JPQL Function arg: "  + arg);
+                    StringBuilder builder = new StringBuilder();
+                    extracted(arg, builder);
                 }
                 String expression = jpqlFunction.getExpressionPattern();
-                sb.append(expression).append(".");
-//                    expression.formatted()
+                String formatted = expression.formatted(methodStack.args());
+                sb.append(formatted).append(".");
             } else {
                 //일반 메서드 호출로 변환
                 String methodName = method.getName();
