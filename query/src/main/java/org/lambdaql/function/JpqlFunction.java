@@ -88,8 +88,8 @@ public class JpqlFunction {
                     new FunctionDescriptor(OffsetDateTime.class.getMethod("getYear"), 0));
             registerFunction(FunctionType.DATETIME, "YEAR", "YEAR(%s)",
                     new FunctionDescriptor(ZonedDateTime.class.getMethod("getYear"), 0));
-            registerFunction(FunctionType.DATETIME, "YEAR", "YEAR(%s)",
-                    new FunctionDescriptor(ChronoZonedDateTime.class.getMethod("getYear"), 0));
+//            registerFunction(FunctionType.DATETIME, "YEAR", "YEAR(%s)",
+//                    new FunctionDescriptor(ChronoZonedDateTime.class.getMethod("getYear"), 0));
 
             registerFunction(FunctionType.DATETIME, "MONTH", "MONTH(%s)",
                     new FunctionDescriptor(LocalDate.class.getMethod("getMonthValue"), 0));
@@ -166,6 +166,8 @@ public class JpqlFunction {
                     new FunctionDescriptor(Math.class.getMethod("sqrt", double.class), 1));
             registerFunction(FunctionType.NUMERIC, "SQRT", "SQRT(%s)",
                     new FunctionDescriptor(JpqlFunction.class.getMethod("sqrt", Number.class), 0));
+            registerFunction(FunctionType.NUMERIC, "ARRAY_LENGTH", "COUNT(%s)",
+                    new FunctionDescriptor(Array.class.getMethod("getLength", Object.class), 0));
 
             // OPERATOR functions
             registerFunction(FunctionType.OPERATOR, "ALL", "%s = ALL(%s)",

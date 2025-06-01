@@ -10,6 +10,8 @@ import org.lambdaql.query.QueryBuilder;
 import org.objectweb.asm.*;
 
 import java.lang.invoke.SerializedLambda;
+import java.lang.reflect.Array;
+import java.lang.reflect.Method;
 import java.util.*;
 
 import static org.objectweb.asm.Opcodes.*;
@@ -155,7 +157,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
 
         Object peek = valueStack.peek();
         MethodStack beforeStack = null;
-        if (peek instanceof MethodStack) {
+        if (peek instanceof MethodStack && !isStatic) {
             // 중간 스택 처리
             beforeStack = (MethodStack) valueStack.pop();
         }
@@ -167,6 +169,9 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 includeEntityVariable = true;
             } else if(value instanceof ObjectCapturedVariable) {
                 includeCapturedVariable = true;
+            } else if (value instanceof MethodStack methodStack) {
+                // 중간 스택인 경우, 파라미터로 추가
+                methodStack.parent(beforeStack);
             }
             params[i] = value;
         }
@@ -190,14 +195,14 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         if(includeEntityVariable && includeCapturedVariable) {
             throw new IllegalStateException("Both EntityVariable and ObjectCapturedVariable cannot be included in the same method call.");
         }
-        methodStack.includeEntityVariable(includeCapturedVariable);
-        methodStack.includeCapturedVariable(includeEntityVariable);
-        methodStack.ownerEntityVariable(ownerEntityVariable);
-        methodStack.ownerCapturedVariable(ownerCapturedVariable);
+//        methodStack.includeEntityVariable(includeCapturedVariable);
+//        methodStack.includeCapturedVariable(includeEntityVariable);
+//        methodStack.ownerEntityVariable(ownerEntityVariable);
+//        methodStack.ownerCapturedVariable(ownerCapturedVariable);
 
         if (beforeStack != null) {
             beforeStack.addStack(methodStack);
-            valueStack.push(methodStack);
+            valueStack.push(beforeStack);
         } else {
             valueStack.push(methodStack);
         }
@@ -369,6 +374,13 @@ public class LambdaPredicateVisitor extends MethodVisitor {
             }
             case ARRAYLENGTH -> {
                 //배열 길이, length property 가 나오는 경우
+                try {
+                    Method method = Array.class.getMethod("getLength", Object.class);//배열 길이 메서드
+                    MethodStack stack = new MethodStack(null, new MethodSignature(method, "java.lang.reflect.Array", true), new Object[]{valueStack.pop()});
+                    valueStack.push(stack);
+                } catch (NoSuchMethodException ignored) {
+
+                }
             }
 //            case IAND -> {
 //                pushLogicalExpr(LogicalOperator.AND, exprStack.pop(), exprStack.pop());
@@ -697,7 +709,8 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         }
         List<Object> list = flattenGroups(root, 0);
         System.out.println("flattenGroups: " + list);
-        JPQLWhereRenderer renderer = new JPQLWhereRenderer(root);
+        JPQLWhereRenderer renderer = new JPQLWhereRenderer(list, lambdaVariable);
+        renderer.lambdaVariable(lambdaVariable);
         return root;
     }
 
@@ -707,7 +720,7 @@ public class LambdaPredicateVisitor extends MethodVisitor {
         int size = children.size();
         boolean isRoot = group.isRoot();
         if (!isRoot) {
-            results.add(OPEN_BRACKET);
+            results.add(RoundBracket.OPEN);
         }
         for (int i = 0; i < size; i++) {
             ConditionNode child = children.get(i);
@@ -718,14 +731,17 @@ public class LambdaPredicateVisitor extends MethodVisitor {
                 ConditionExpression expr = l.condition();
                 if (expr instanceof ComparisonBinaryCondition binary) {
                     results.add(binary.left());
-                    results.add(binary.operator().symbol());
+                    results.add(binary.operator());
                     results.add(binary.right());
                     if(!isRoot && i == size -1) {
                         //depth 만큼 닫기 괄호 추가
-                        results.add(CLOSE_BRACKET.repeat(depth));
+                        for (int j = 0; j < depth; j++) {
+                            results.add(RoundBracket.CLOSE);
+                        }
                     }
-                    if(!isRoot)
-                        results.add(binary.logicalOperator().name());
+                    if(!isRoot && !(depth == 1 && i == size - 1)) {
+                        results.add(binary.logicalOperator());
+                    }
                 }
             }
         }

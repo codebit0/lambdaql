@@ -10,11 +10,12 @@ import java.util.List;
 @Getter
 @Accessors(fluent = true)
 public class MethodStack {
+    @Setter
     private MethodStack parent;
     private final Object owner;
     private final MethodSignature signature;
     private final Object[] args;
-    private List<Object> stacks = new ArrayList<>();
+    private List<MethodStack> stacks = new ArrayList<>();
 
     private boolean includeEntityVariable = false;
     private boolean includeCapturedVariable = false;
@@ -26,23 +27,42 @@ public class MethodStack {
 
     public MethodStack(Object owner, MethodSignature signature, Object[] args) {
         this.owner = owner;
+        boolean includeEntityVariable = owner instanceof EntityVariable;
+        for(Object arg : args) {
+            if (arg instanceof MethodStack methodStack && methodStack.includeEntityVariable()) {
+                methodStack.parent = this;
+                includeEntityVariable = true;
+            }
+        }
+        if (includeEntityVariable) {
+            this.includeEntityVariable(true);
+        }
+
         this.signature = signature;
         this.args = args;
     }
 
-    public MethodStack addStack(MethodStack stack) {
-        stack.parent = this;
-        stacks.add(stack);
+    public void addStack(MethodStack stack) {
+//        boolean includeEntityVariable = false;
+//        for(Object arg : stack.args()) {
+//            if (arg instanceof MethodStack methodStack && methodStack.includeEntityVariable()) {
+//                methodStack.parent = this;
+//                includeEntityVariable = true;
+//            }
+//        }
         if (stack.includeEntityVariable()) {
-            includeEntityVariable(true);
+            stack.includeEntityVariable(true);
         }
-        return this;
+        stacks.add(stack);
     }
 
     public void includeEntityVariable(boolean isEntity) {
         this.includeEntityVariable = isEntity;
-        if (parent != null) {
-            parent.includeEntityVariable = isEntity;
+        if(isEntity) {
+            while (parent != null) {
+                parent = parent.parent;
+                parent.includeEntityVariable = true;
+            }
         }
     }
 

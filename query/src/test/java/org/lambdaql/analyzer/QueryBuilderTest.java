@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import javax.sql.DataSource;
+import java.lang.reflect.Array;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.Statement;
@@ -89,7 +90,9 @@ class QueryBuilderTest {
         QueryBuilder queryBuilder = new QueryBuilder(entityManagerFactory);
         SelectQuery<Order> query = queryBuilder.from(Order.class);
         SelectQuery.SelectWhere<Order> where1 = query.where(o -> o.getDescription().getBytes().length == 10);
+        SelectQuery.SelectWhere<Order> where2 = query.where(o -> Array.getLength(o.getDescription().getBytes()) == 10);
         SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getDescription().startsWith(param1));
+
 
         assertEquals("o1.id like :param1", where0.toString());
         assertEquals("SELECT * FROM order as o1 where o1.description like :param1", query.toString());
