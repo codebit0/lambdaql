@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Date;
 import java.util.List;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -63,7 +64,7 @@ class QueryBuilderTest {
 
 //        query.orderBy(o-> {
 ////            return List.of(o::getCustomer, o::getCustomer);
-//            List<Direction> asc = List.of(Direction.asc(o::getCustomer));
+//            List<OrderBy2> asc = List.of(OrderBy2.asc(o::getCustomer));
 //            return asc;
 //        });
         SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getId() == 10);
@@ -92,7 +93,12 @@ class QueryBuilderTest {
 //        SelectQuery.SelectWhere<Order> where1 = query.where(o -> o.getDescription().getBytes().length == 10);
 //        SelectQuery.SelectWhere<Order> where2 = query.where(o -> Array.getLength(o.getDescription().getBytes()) == 10);
         SelectQuery.SelectWhere<Order> where0 = query.where(o -> o.getDescription().startsWith(param1));
-
+        where0.orderBy(Order::getId).
+                orderBy(Order::getDescription, true);
+                .having(o -> o.getId() > 0)
+                .limit(10)
+                .offset(5)
+                .select(o->o);
 
         assertEquals("o1.id like :param1", where0.toString());
         assertEquals("SELECT * FROM order as o1 where o1.description like :param1", query.toString());

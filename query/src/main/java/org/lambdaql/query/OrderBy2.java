@@ -3,7 +3,7 @@ package org.lambdaql.query;
 import java.io.Serializable;
 import java.util.function.Supplier;
 
-public sealed interface Direction permits Direction.ASC, Direction.DESC {
+public sealed interface OrderBy2 permits OrderBy2.ASC, OrderBy2.DESC {
 
     public static void direction(){
 
@@ -17,13 +17,13 @@ public sealed interface Direction permits Direction.ASC, Direction.DESC {
         return new DESC(method);
     }
 
-    public final class ASC implements Direction, Serializable {
+    public final class ASC implements OrderBy2, Serializable {
         public <T> ASC(Supplier<T> method) {
 
         }
     }
 
-    public final class DESC implements Direction, Serializable {
+    public final class DESC implements OrderBy2, Serializable {
         public <T> DESC(Supplier<T> method) {
 
         }

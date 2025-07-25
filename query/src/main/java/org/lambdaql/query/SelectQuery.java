@@ -7,6 +7,7 @@ import org.lambdaql.analyzer.grouping.ConditionGroup;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.function.Function;
 
 public class SelectQuery<T> {
 
@@ -74,17 +75,31 @@ public class SelectQuery<T> {
     }
 
 //    @FunctionalInterface
-//    public interface OrderBy<T> extends Serializable {
+//    public interface OrderBy2<T> extends Serializable {
 //        List<Supplier<T>> clause(T entity);
 //    }
 
     @FunctionalInterface
     public interface Order<T> extends Serializable {
-        List<Direction> direction(T entity);
+        List<OrderBy2> direction(T entity);
+    }
+
+    public interface OrderClause<T> {
+        OrderClause<T> orderBy(Function<T, ?> fieldGetter);
+        OrderClause<T> orderBy(Function<T, ?> fieldGetter, OrderBy direction);
+        <R> R select(Function<T, R> selector);
+
+//        default SelectQuery<T> limit(int limit) {
+//            return this;
+//        }
+//
+//        default SelectQuery<T> offset(int offset) {
+//            return this;
+//        }
     }
 
 
-//    public interface Direction<T> extends Serializable {
+//    public interface OrderBy2<T> extends Serializable {
 //        public static void asc(Supplier<?> supplier) {
 //
 //        }
@@ -95,24 +110,38 @@ public class SelectQuery<T> {
 //    }
 //
 ////    @FunctionalInterface
-//    public interface Desc<T> extends Direction<T>, Serializable {
+//    public interface Desc<T> extends OrderBy2<T>, Serializable {
 //
 //    }
 //
 ////    @FunctionalInterface
-//    public interface Asc<T> extends Direction<T>, Serializable {
+//    public interface Asc<T> extends OrderBy2<T>, Serializable {
 //
 //    }
 
 //
 //
-//    public SelectQuery<T> orderBy(OrderBy<T> orderBy, OrderBy<T> ... othderOrderBy) {
+//    public SelectQuery<T> orderBy(OrderBy2<T> orderBy, OrderBy2<T> ... othderOrderBy) {
 //        return this;
 //    }
 
-    public SelectQuery<T> orderBy(Order<T> orderBy) {
+//    public SelectQuery<T> orderBy(Order<T> orderBy) {
+//        return this;
+//    }
+
+//    public SelectQuery<T> orderBy(Function<T, ?> fieldGetter) {
+//        return this;
+//    }
+
+
+//    public SelectQuery<T> orderBy(Function<T, ?> fieldGetter, OrderBy direction) {
+//        return this;
+//    }
+
+    public SelectQuery<T> orderBy(Function<T, ?> fieldGetter, boolean descending=false) {
         return this;
     }
+
 
     public SelectQuery<T> limit(int limit) {
         return this;
